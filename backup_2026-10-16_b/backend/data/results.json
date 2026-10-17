@@ -1,0 +1,137 @@
+{
+ "note": "Python package, 20 seeds, synthetic traffic",
+ "load": [
+  {
+   "value": 0.5,
+   "unicast": 177.3,
+   "broadcast": 73.65,
+   "coded": 73.65,
+   "unicast_miss": 0.385,
+   "broadcast_miss": 0.3765,
+   "coded_miss": 0.3765
+  },
+  {
+   "value": 1.0,
+   "unicast": 731.8,
+   "broadcast": 198.6,
+   "coded": 199.25,
+   "unicast_miss": 0.4223,
+   "broadcast_miss": 0.3524,
+   "coded_miss": 0.3519
+  },
+  {
+   "value": 1.5,
+   "unicast": 1310.0,
+   "broadcast": 340.9,
+   "coded": 339.55,
+   "unicast_miss": 0.6388,
+   "broadcast_miss": 0.3436,
+   "coded_miss": 0.3436
+  },
+  {
+   "value": 2.0,
+   "unicast": 1569.05,
+   "broadcast": 500.1,
+   "coded": 497.15,
+   "unicast_miss": 0.9054,
+   "broadcast_miss": 0.3536,
+   "coded_miss": 0.3531
+  },
+  {
+   "value": 3.0,
+   "unicast": 1785.5,
+   "broadcast": 811.6,
+   "coded": 795.7,
+   "unicast_miss": 0.9856,
+   "broadcast_miss": 0.3563,
+   "coded_miss": 0.3562
+  }
+ ],
+ "loss": [
+  {
+   "value": 0.0,
+   "unicast": 1279.95,
+   "broadcast": 269.75,
+   "coded": 269.7,
+   "unicast_miss": 0.6173,
+   "broadcast_miss": 0.3432,
+   "coded_miss": 0.3432
+  },
+  {
+   "value": 0.05,
+   "unicast": 1310.0,
+   "broadcast": 340.9,
+   "coded": 339.55,
+   "unicast_miss": 0.6388,
+   "broadcast_miss": 0.3436,
+   "coded_miss": 0.3436
+  },
+  {
+   "value": 0.1,
+   "unicast": 1338.2,
+   "broadcast": 397.85,
+   "coded": 395.95,
+   "unicast_miss": 0.6607,
+   "broadcast_miss": 0.3448,
+   "coded_miss": 0.3448
+  },
+  {
+   "value": 0.2,
+   "unicast": 1404.9,
+   "broadcast": 506.2,
+   "coded": 498.0,
+   "unicast_miss": 0.7238,
+   "broadcast_miss": 0.3477,
+   "coded_miss": 0.3472
+  },
+  {
+   "value": 0.3,
+   "unicast": 1467.85,
+   "broadcast": 621.6,
+   "coded": 611.95,
+   "unicast_miss": 0.7919,
+   "broadcast_miss": 0.3509,
+   "coded_miss": 0.3498
+  }
+ ],
+ "paired": [
+  {
+   "setting": "rate1.5",
+   "saving_pct": 0.325,
+   "saving_ci": 0.436,
+   "miss_diff_pts": 0.001,
+   "miss_diff_ci": 0.043,
+   "seeds": 20.0
+  },
+  {
+   "setting": "rate3.0",
+   "saving_pct": 1.881,
+   "saving_ci": 0.467,
+   "miss_diff_pts": 0.006,
+   "miss_diff_ci": 0.188,
+   "seeds": 20.0
+  },
+  {
+   "setting": "rate3.0_loss0.3",
+   "saving_pct": 3.375,
+   "saving_ci": 0.741,
+   "miss_diff_pts": 3.474,
+   "miss_diff_ci": 1.13,
+   "seeds": 20.0
+  },
+  {
+   "setting": "rate1.5_loss0.2",
+   "saving_pct": 1.607,
+   "saving_ci": 0.665,
+   "miss_diff_pts": 0.046,
+   "miss_diff_ci": 0.135,
+   "seeds": 20.0
+  }
+ ],
+ "checkpoint": {
+  "snapshots": 406,
+  "broadcast": 3.7,
+  "greedy": 3.655,
+  "exact": 3.648
+ }
+}

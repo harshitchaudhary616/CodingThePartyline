@@ -1,0 +1,12 @@
+services:
+  backend:
+    build: ./backend
+    ports: ["8000:8000"]
+    volumes: ["pl_data:/data"]
+    environment:
+      PL_API_KEY: ${PL_API_KEY:-}            # set to require X-API-Key
+      OPENSKY_CLIENT_ID: ${OPENSKY_CLIENT_ID:-}
+      OPENSKY_CLIENT_SECRET: ${OPENSKY_CLIENT_SECRET:-}
+    restart: unless-stopped
+volumes:
+  pl_data:

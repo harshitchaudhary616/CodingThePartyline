@@ -1,0 +1,18 @@
+STGC2 versus published-style IDNC (idnc_pub), critical weight 10, loss 0.3, airspaces 4 5 8 9 11 12 13 14
+  uplinks: % saved (positive = STGC2 better); misses: percentage points (negative = STGC2 better)
+
+=== STGC2 vs published-style IDNC
+configuration                         uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+ideal feedback                 +18.0 [ +17.3, +19.9]*       -13.8 [ -17.7,  -9.9]*        -7.6 [  -9.3,  -5.6]*       -31.8 [ -43.0, -17.0]*   [8 airspaces]
+60% of reports lost            +26.6 [ +22.5, +32.8]*       -23.3 [ -27.5, -19.0]*       -13.8 [ -16.8, -10.9]*       -47.0 [ -54.6, -34.1]*   [8 airspaces]
+
+=== STGC2 vs our class-blind IDNC
+configuration                         uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+ideal feedback                 +10.4 [  +9.0, +12.1]*       -15.2 [ -20.5,  -7.8]*        -5.6 [  -8.6,  -1.8]*        -8.1 [ -11.7,  -3.3]*   [8 airspaces]
+60% of reports lost            +15.3 [ +12.5, +20.2]*       -19.9 [ -25.2, -11.2]*       -11.3 [ -15.2,  -5.8]*       -17.8 [ -23.0, -10.9]*   [8 airspaces]
+
+=== STGC2 vs class-aware IDNC
+configuration                         uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+ideal feedback                  +2.1 [  -1.1,  +7.0]         +4.7 [  +3.2,  +6.2]-        +0.3 [  -0.0,  +1.5]         -3.0 [  -4.3,  -1.4]*   [8 airspaces]
+60% of reports lost             +7.1 [  +1.9, +14.9]*        +3.5 [  +2.4,  +4.6]-        +0.2 [  +0.1,  +0.5]-        -8.3 [ -11.3,  -4.9]*   [8 airspaces]
+

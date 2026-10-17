@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Party Line Results</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#2b3340;--ink:#e6edf3;--mut:#8b98a8;--ok:#3fb950;--bad:#f85149;--warn:#d29922;--acc:#58a6ff;--c0:#8b98a8;--c1:#d29922;--c2:#bc8cff;--c3:#3fb950}
+@media(prefers-color-scheme:light){:root{--bg:#f6f8fa;--panel:#fff;--line:#d0d7de;--ink:#1f2328;--mut:#59636e;--ok:#1a7f37;--bad:#cf222e;--warn:#9a6700;--acc:#0969da;--c0:#59636e;--c1:#9a6700;--c2:#8250df;--c3:#1a7f37}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+h1{font-size:16px;margin:0}
+h2{margin:0 0 4px;font-size:15px}
+main{max-width:1240px;margin:0 auto;padding:14px 16px 60px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
+.banner{border:1px solid var(--line);border-left:4px solid var(--warn);background:var(--panel);padding:9px 12px;border-radius:6px;margin-bottom:10px}
+.banner.real{border-left-color:var(--ok)}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:22px;text-align:center;color:var(--mut)}
+.drop.over{border-color:var(--acc)}
+button,label.btn{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer;font:inherit}
+button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.mut{color:var(--mut)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--panel)}
+.card h3{margin:0 0 6px;font-size:13px;color:var(--mut);font-weight:600}
+.big{font-size:26px;font-weight:700}
+.sig{color:var(--ok)}.ns{color:var(--mut)}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+svg text{fill:var(--ink);font:11px system-ui,sans-serif}
+svg .m{fill:var(--mut)}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+ul{margin:6px 0 0 18px;padding:0}
+li{margin:3px 0}
+.hidden{display:none}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--mut);font-weight:600}
+tr.grp td{color:var(--mut);font-size:12px;text-align:left;padding-top:10px;border-bottom:none}
+tr.hl td{background:color-mix(in srgb,var(--ok) 12%,transparent)}
+.scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+<header><h1>Party Line · Results</h1><span class="mut" id="stat">no results loaded</span></header>
+<main>
+<div class="panel" id="loader">
+  <div class="drop" id="drop">
+    Drop your result files here, or
+    <label class="btn" for="pick">choose files</label>
+    <input id="pick" type="file" accept=".json" multiple hidden>
+    <div class="mut" style="margin-top:8px">Any of: <b>expw_dataset&lt;id&gt;.json</b> (windowed evaluation), <b>sens_dataset&lt;id&gt;.json</b> (sensitivity), <b>algo_dataset&lt;ids&gt;_loss&lt;x&gt;.json</b> (algorithm study), <b>dtc_dataset&lt;ids&gt;_loss&lt;x&gt;_het&lt;h&gt;.json</b> (tiered repair study), <b>party_dataset&lt;ids&gt;_loss&lt;x&gt;_A&lt;a&gt;[_het&lt;h&gt;][_r&lt;R&gt;][_rep&lt;q&gt;].json</b> (party-line study). Pick several at once from <code>partyline_app/backend/data/</code>. Files are read in your browser only.</div>
+  </div>
+</div>
+<div id="out" class="hidden">
+  <div id="banner"></div>
+
+  <div class="panel" id="expPanel"><h2>Headline: coded delivery against plain broadcast (earlier schedulers)</h2>
+    <div class="mut" style="margin-bottom:8px">Evaluation file. Both schemes here use the earlier priority rule; the algorithm study below uses the stronger, fair baselines.</div>
+    <div class="cards" id="cards"></div>
+    <h2 style="margin-top:14px">Missed schedulable deadlines by scheme</h2>
+    <div class="mut" style="margin-bottom:8px">Lower is better. Whiskers are 95% intervals across independent time windows.</div>
+    <div class="row2" id="bars"></div></div>
+
+  <div class="panel" id="sensPanel"><h2>Does the result survive changes to modelling choices?</h2>
+    <div class="mut" style="margin-bottom:8px">One factor changed at a time. Each dot is the mean improvement of coded; the line is the 95% interval. Green = interval excludes zero (coded better). Repeated copies of the baseline setting are shown once in the counts.</div>
+    <div class="tabs"><button id="tb" class="on">Coded vs broadcast</button><button id="ti">Coded vs published-style IDNC</button></div>
+    <div class="row2" id="forest"></div></div>
+
+  <div class="panel" id="algoPanel"><h2>Scheduling studies</h2>
+    <div class="mut" style="margin-bottom:8px" id="algoNote"></div>
+    <div class="tabs" id="lossTabs"></div>
+    <div class="scroll"><table id="algoTable"></table></div>
+    <h2 style="margin-top:16px">Paired differences</h2>
+    <div class="mut" style="margin-bottom:8px">Positive = the first scheme is better. Green = 95% interval excludes zero. "Strict" counts clearances withdrawn by a newer clearance as missed; "excl." does not.</div>
+    <div class="row2" id="algoForest"></div>
+    <div id="tradeWrap" class="hidden"><h2 style="margin-top:16px">Transmissions against latency</h2>
+      <div class="mut" style="margin-bottom:8px">Each point is a scheme (mean over windows). Down = fewer transmissions, left = faster delivery. The line joins the proposed scheme at different repair hold times (0 s = immediate repair).</div>
+      <div id="tradeoff" style="max-width:640px"></div></div>
+  </div>
+
+  <div class="panel" id="partyPanel"><h2>Party-line study: critical and awareness delivery</h2>
+    <div class="mut" style="margin-bottom:8px" id="partyNote"></div>
+    <div class="tabs" id="partyTabs"></div>
+    <div class="cards" id="partyCards" style="margin-bottom:12px"></div>
+    <div class="scroll"><table id="partyTable"></table></div>
+    <h2 style="margin-top:16px">Paired differences</h2>
+    <div class="mut" style="margin-bottom:8px">Positive = the first scheme is better. Green = 95% interval excludes zero, red = significantly worse. Today's addressed (CPDLC) delivery is in the table above; it is left out of these charts because its gap dwarfs the others. Misses exclude clearances withdrawn by a newer one.</div>
+    <div class="row2" id="partyForest"></div>
+  </div>
+
+  <div class="panel"><h2>Plain-English reading</h2><div id="reading"></div></div>
+  <div class="panel"><h2>What this does not show</h2>
+    <ul>
+      <li>Aircraft paths are recorded ADS-B; <b>clearances and the radio channel are simulated</b>.</li>
+      <li>Real traffic is already separated by controllers, so conflicts are near-passes within the chosen thresholds.</li>
+      <li>Results come from the recorded airspaces and time periods only. More airspaces and times of day are needed.</li>
+      <li>Intervals assume the time windows are independent; neighbouring windows can share traffic patterns.</li>
+      <li>Many comparisons were made on the same data, so isolated significant results should be read with care.</li>
+      <li>The coding gain over an equally-improved IDNC is small. Most of the improvement comes from the scheduling policy (hard-deadline rule, tiered repair batching), which any coder can use.</li>
+      <li>Tiered repair saves transmissions by letting repairs wait a bounded time: aircraft that missed a clearance get it a few seconds later, and slightly more old clearances are withdrawn before delivery (strict metric).</li>
+      <li>The ground station is assumed to know every aircraft's reception state (free feedback), for all schemes alike.</li>
+      <li class="partyOnly hidden"><b>Awareness demand is a model, not a measurement:</b> every other aircraft in the same sector (or within a radius) should receive a clearance within a soft deadline. The deadline and sector size are assumptions; the study repeats the result with other values.</li>
+      <li class="partyOnly hidden"><b>Feedback is not free in the channel-time columns:</b> broadcast schemes need state reports from many aircraft, so they use more channel time than addressed delivery. Addressed delivery is cheap only because it misses most deadlines at this load.</li>
+      <li class="partyOnly hidden">No VDL Mode 2 collision or access-delay model beyond a fixed background load; the channel is a simplified loss model.</li>
+    </ul></div>
+</div>
+</main>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let EXP = null, SENS = null, ALGO = {}, view = 'b', algoLoss = null, partyKey = null;
+const NAMES = {unicast: 'Addressed', broadcast: 'Broadcast', idnc: 'IDNC (published-style)', coded: 'Coded (ours)'};
+const COLS = {unicast: 'var(--c0)', broadcast: 'var(--c1)', idnc: 'var(--c2)', coded: 'var(--c3)'};
+const sig = v => v && v[0] - v[1] > 0;
+const fmt = (v, d = 1) => v[0].toFixed(d) + ' ± ' + v[1].toFixed(d);
+
+function ingest(obj, name) {
+  if (obj && obj.results && obj.base) { SENS = obj; }
+  else if (obj && obj.schemes && obj.paired && obj.meta && obj.channel) { ALGO[[obj.meta.study || 'algo', obj.channel.loss, obj.channel.het || 0, obj.meta.A || 0, obj.meta.sector || 0, obj.meta.sector === 0 ? obj.meta.r_aware : 0, obj.meta.reports ? obj.meta.fbloss : -1].join('|')] = obj; }
+  else if (obj && Object.values(obj).some(v => v && v.schemes && v.paired)) { EXP = obj; }
+  else throw new Error(name + ' is not a results file from experiments_windows.py, experiments_sensitivity.py or experiments_algo.py');
+}
+async function load(files) {
+  const errs = [];
+  for (const f of files) {
+    try { ingest(JSON.parse(await f.text()), f.name); } catch (e) { errs.push(e.message); }
+  }
+  const bits = [];
+  if (EXP) bits.push('evaluation ✓'); if (SENS) bits.push('sensitivity ✓');
+  const ka = Object.keys(ALGO);
+  if (ka.some(k => k.startsWith('algo|'))) bits.push('algorithm study ✓');
+  if (ka.some(k => k.startsWith('dtc|'))) bits.push('tiered repair study ✓');
+  if (ka.some(k => k.startsWith('party|'))) bits.push('party-line study ✓');
+  $('stat').textContent = bits.join('  ') || 'no results loaded';
+  if (errs.length) alert(errs.join('\n'));
+  render();
+}
+$('pick').onchange = e => load([...e.target.files]);
+const dz = $('drop');
+['dragover', 'dragenter'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove('over'); }));
+dz.addEventListener('drop', e => load([...e.dataTransfer.files]));
+$('tb').onclick = () => { view = 'b'; $('tb').classList.add('on'); $('ti').classList.remove('on'); forest(); };
+$('ti').onclick = () => { view = 'i'; $('ti').classList.add('on'); $('tb').classList.remove('on'); forest(); };
+
+function render() {
+  if (!EXP && !SENS && !Object.keys(ALGO).length) return;
+  $('out').classList.remove('hidden');
+  let html = '';
+  if (EXP) {
+    const meta = Object.values(EXP)[0].dataset;
+    if (meta) {
+      const win = meta.windows ? `${meta.windows} independent ${meta.window_min}-minute windows` : `${Object.values(EXP)[0].n_seeds} runs`;
+      html += meta.is_real
+        ? `<div class="banner real"><b>Real aircraft paths:</b> ${esc(meta.name)} (${meta.rows.toLocaleString()} recorded ADS-B positions, ${win}). Clearances and the channel are simulated.</div>`
+        : `<div class="banner"><b>Synthetic traffic:</b> ${esc(meta.name)}. This is not evidence about real airspace.</div>`;
+    }
+  }
+  const seenStudy = new Set();
+  Object.values(ALGO).forEach(a0 => {
+    const st = a0.meta.study === 'dtc' ? 'Tiered repair study' : a0.meta.study === 'party' ? 'Party-line study' : 'Algorithm study';
+    if (seenStudy.has(st + a0.meta.name)) return;
+    seenStudy.add(st + a0.meta.name);
+    html += a0.meta.is_real
+      ? `<div class="banner real"><b>${st}, real aircraft paths:</b> ${esc(a0.meta.name)} — ${a0.n} windows pooled. Clearances and the channel are simulated.</div>`
+      : `<div class="banner"><b>${st} on synthetic traffic:</b> ${esc(a0.meta.name)}. Self-test only; not evidence about real airspace.</div>`;
+  });
+  if (!html) html = '<div class="banner">Dataset provenance not available in the loaded files.</div>';
+  $('banner').innerHTML = html;
+  $('expPanel').classList.toggle('hidden', !EXP);
+  $('cards').innerHTML = ''; $('bars').innerHTML = '';
+  if (EXP) { cards(); bars(); }
+  $('sensPanel').classList.toggle('hidden', !SENS);
+  if (SENS) forest();
+  const losses = algoKeys();
+  const pk = partyKeys();
+  $('partyPanel').classList.toggle('hidden', !pk.length);
+  document.querySelectorAll('.partyOnly').forEach(e => e.classList.toggle('hidden', !pk.length));
+  if (pk.length) {
+    if (!pk.includes(partyKey)) partyKey = pk[0];
+    $('partyTabs').innerHTML = pk.map(l => `<button data-l="${esc(l)}" class="${l === partyKey ? 'on' : ''}">${esc(partyLabel(l))}</button>`).join('');
+    [...$('partyTabs').children].forEach(b => b.onclick = () => { partyKey = b.dataset.l; render(); });
+    party();
+  }
+  $('algoPanel').classList.toggle('hidden', !losses.length);
+  if (losses.length) {
+    if (!losses.includes(algoLoss)) algoLoss = losses[0];
+    $('lossTabs').innerHTML = losses.map(l => `<button data-l="${esc(l)}" class="${l === algoLoss ? 'on' : ''}">${esc(tabLabel(l))}</button>`).join('');
+    [...$('lossTabs').children].forEach(b => b.onclick = () => { algoLoss = b.dataset.l; render(); });
+    algo();
+  }
+  reading();
+}
+
+function cards() {
+  Object.keys(EXP).forEach(k => {
+    const o = EXP[k], p = o.paired, loss = o.channel.loss;
+    const cb = p.coded_vs_broadcast, ci = p.coded_vs_idnc;
+    const div = document.createElement('div'); div.className = 'card';
+    div.innerHTML = `<h3>Packet loss ${Math.round(loss * 100)}% · ${o.n_seeds} windows</h3>
+      <div class="mut">Coded vs broadcast</div>
+      <div class="big ${sig(cb.tx_saving_pct) ? 'sig' : 'ns'}">${cb.tx_saving_pct[0].toFixed(1)}%</div>
+      <div class="mut">fewer transmissions (${fmt(cb.tx_saving_pct)}) ${sig(cb.tx_saving_pct) ? '✓ significant' : 'not significant'}</div>
+      <div class="big ${sig(cb.miss_sched_improvement_pts) ? 'sig' : 'ns'}" style="margin-top:8px">${cb.miss_sched_improvement_pts[0].toFixed(1)} pts</div>
+      <div class="mut">fewer missed schedulable deadlines (${fmt(cb.miss_sched_improvement_pts)}) ${sig(cb.miss_sched_improvement_pts) ? '✓ significant' : 'not significant'}</div>
+      <div class="mut" style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">Coded vs IDNC: ${fmt(ci.tx_saving_pct)}% tx, ${fmt(ci.miss_sched_improvement_pts)} pts misses
+      ${(sig(ci.tx_saving_pct) || sig(ci.miss_sched_improvement_pts)) ? '(some evidence of an edge)' : '(no significant difference)'}</div>`;
+    $('cards').appendChild(div);
+  });
+}
+
+function bars() {
+  Object.keys(EXP).forEach(k => {
+    const o = EXP[k], S = ['unicast', 'broadcast', 'idnc', 'coded'];
+    const vals = S.map(s => o.schemes[s].miss_sched.map(x => 100 * x));
+    const max = Math.max(...vals.map(v => v[0] + v[1]), 1) * 1.1;
+    const W = 440, H = 220, L = 44, B = 40, T = 14, bw = 56, gap = (W - L - 10 - bw * 4) / 4;
+    let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="missed schedulable deadlines by scheme at ${o.channel.loss} loss">`;
+    for (let i = 0; i <= 4; i++) {
+      const v = max * i / 4, y = H - B - (H - B - T) * i / 4;
+      s += `<line x1="${L}" x2="${W - 6}" y1="${y}" y2="${y}" stroke="var(--line)"/><text class="m" x="${L - 6}" y="${y + 4}" text-anchor="end">${v.toFixed(0)}%</text>`;
+    }
+    S.forEach((n, i) => {
+      const [m, c] = vals[i], x = L + gap / 2 + i * (bw + gap), y = H - B - (H - B - T) * m / max, y2 = H - B - (H - B - T) * Math.max(m - c, 0) / max, y3 = H - B - (H - B - T) * (m + c) / max;
+      s += `<rect x="${x}" y="${y}" width="${bw}" height="${H - B - y}" rx="3" fill="${COLS[n]}"/>`;
+      s += `<line x1="${x + bw / 2}" x2="${x + bw / 2}" y1="${y2}" y2="${y3}" stroke="var(--ink)"/><line x1="${x + bw / 2 - 5}" x2="${x + bw / 2 + 5}" y1="${y3}" y2="${y3}" stroke="var(--ink)"/><line x1="${x + bw / 2 - 5}" x2="${x + bw / 2 + 5}" y1="${y2}" y2="${y2}" stroke="var(--ink)"/>`;
+      s += `<text x="${x + bw / 2}" y="${H - B + 14}" text-anchor="middle">${n === 'idnc' ? 'IDNC' : NAMES[n].split(' ')[0]}</text><text class="m" x="${x + bw / 2}" y="${H - B + 27}" text-anchor="middle">${m.toFixed(1)}%</text>`;
+    });
+    s += '</svg>';
+    const d = document.createElement('div');
+    d.innerHTML = `<div class="mut" style="margin-bottom:2px">Packet loss ${Math.round(o.channel.loss * 100)}%</div>` + s;
+    $('bars').appendChild(d);
+  });
+}
+
+function forestSvg(rows, title, unit) {
+  const R = 20, L = 190, W = 560, T = 26, H = T + rows.length * R + 24;
+  const ext = Math.max(1, ...rows.map(r => Math.abs(r.v[0]) + r.v[1])) * 1.1;
+  const X = v => L + (W - L - 10) * (v + ext) / (2 * ext);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(title)}"><text x="${L}" y="12" style="font-weight:600">${esc(title)}</text>`;
+  s += `<line x1="${X(0)}" x2="${X(0)}" y1="${T - 6}" y2="${H - 20}" stroke="var(--mut)" stroke-dasharray="3 3"/>`;
+  let prev = '';
+  rows.forEach((r, i) => {
+    const y = T + i * R + R / 2, c = sig(r.v) ? 'var(--ok)' : (r.v && r.v[0] + r.v[1] < 0 ? 'var(--bad)' : 'var(--mut)');
+    if (r.factor !== prev) { s += `<line x1="0" x2="${W}" y1="${y - R / 2}" y2="${y - R / 2}" stroke="var(--line)"/>`; prev = r.factor; }
+    s += `<text class="m" x="${L - 6}" y="${y + 4}" text-anchor="end">${esc(r.label)}</text>`;
+    s += `<line x1="${X(r.v[0] - r.v[1])}" x2="${X(r.v[0] + r.v[1])}" y1="${y}" y2="${y}" stroke="${c}" stroke-width="2"/><circle cx="${X(r.v[0])}" cy="${y}" r="3.5" fill="${c}"/>`;
+  });
+  [-ext, 0, ext].forEach(v => s += `<text class="m" x="${X(v)}" y="${H - 6}" text-anchor="middle">${v.toFixed(0)}${unit || ''}</text>`);
+  return s + '</svg>';
+}
+function forest() {
+  if (!SENS) return;
+  const R = SENS.results, tx = view === 'b' ? 'tx_vs_broadcast' : 'tx_vs_idnc', ms = view === 'b' ? 'miss_vs_broadcast' : 'miss_vs_idnc';
+  const names = {loss: 'packet loss', bg: 'background load', slack: 'slack threshold s', max_aircraft: 'aircraft cap', r_alert: 'conflict radius NM', margin: 'margin s'};
+  const rows = k => Object.keys(R).map(key => { const [f, v] = key.split('='); return {factor: f, label: `${names[f] || f} ${v}`, v: R[key][k]}; });
+  $('forest').innerHTML = `<div>${forestSvg(rows(tx), 'Fewer transmissions (%)')}</div><div>${forestSvg(rows(ms), 'Fewer missed schedulable deadlines (points)')}</div>`;
+}
+
+/* ---------------- scheduling studies ---------------- */
+function algoKeys() {
+  return Object.keys(ALGO).filter(k => !k.startsWith('party|')).sort((x, y) => { const [sa, la, ha] = x.split('|'), [sb, lb, hb] = y.split('|'); return sa === sb ? (+la - +lb) || (+ha - +hb) : (sa === 'dtc' ? -1 : 1); });
+}
+function tabLabel(k) {
+  const [st, l, h] = k.split('|');
+  return (st === 'dtc' ? 'Tiered repair' : 'Algorithm study') + ` · loss ${Math.round(+l * 100)}%` + (+h > 0 ? ' · distance-dependent' : '');
+}
+const SCHEME_ORDER = ['broadcast', 'idnc', 'coded', 'broadcast_hd', 'idnc_hd', 'coded_hd', 'broadcast_best', 'idnc_best', 'coded_best',
+  'bcast_tiered', 'idnc_tiered', 'tiered', 'dtc'];
+const SCHEME_LABEL = {broadcast: 'Broadcast (earlier)', idnc: 'IDNC (earlier)', coded: 'Coded (earlier)', broadcast_hd: 'Broadcast + hard deadline', idnc_hd: 'IDNC + hard deadline (published-style)', coded_hd: 'Coded + hard deadline', broadcast_best: 'Broadcast + max-weight', idnc_best: 'IDNC + max-weight', coded_best: 'Coded + max-weight',
+  bcast_tiered: 'Broadcast + tiered repair', idnc_tiered: 'IDNC + tiered repair', tiered: 'Coded + tiered repair (proposed)', dtc: 'Tiered + delay-tolerant repair'};
+const SHORT = {broadcast: 'Broadcast (earlier)', idnc: 'IDNC (earlier)', coded: 'Coded (earlier)', broadcast_hd: 'Broadcast hd', idnc_hd: 'IDNC hd', coded_hd: 'Coded hd', broadcast_best: 'Broadcast best', idnc_best: 'IDNC best', coded_best: 'Coded best',
+  bcast_tiered: 'Broadcast tiered', idnc_tiered: 'IDNC tiered', tiered: 'Proposed (tiered)', dtc: 'DTC'};
+function schemeLabel(n, short) {
+  let m = n.match(/^tiered_h(\d+(?:\.\d+)?)$/); if (m) return short ? `Proposed, hold ${m[1]} s` : `Coded + tiered repair, hold ${m[1]} s`;
+  m = n.match(/^(idnc|coded)_bestlazy(\d+(?:\.\d+)?)$/); if (m) return `${m[1] === 'idnc' ? 'IDNC' : 'Coded'} best + hold ${m[2]} s`;
+  return (short ? SHORT[n] : SCHEME_LABEL[n]) || n;
+}
+const GROUPS = {
+  algo: [
+    ['Does the hard-deadline rule matter?', ['broadcast_hd_vs_broadcast', 'idnc_hd_vs_idnc', 'coded_hd_vs_coded']],
+    ['Fair comparison, hard-deadline schemes', ['coded_hd_vs_idnc_hd', 'coded_hd_vs_broadcast_hd', 'idnc_hd_vs_broadcast_hd']],
+    ['Max-weight packets help both coders', ['idnc_best_vs_idnc_hd', 'coded_best_vs_coded_hd']],
+    ['Fair comparison, max-weight schemes', ['coded_best_vs_idnc_best', 'coded_best_vs_broadcast_best', 'idnc_best_vs_broadcast_best']],
+    ['Full package vs earlier-style baselines', ['coded_best_vs_idnc_hd', 'coded_best_vs_broadcast_hd']]],
+  dtc: [
+    ['Headline: proposed vs baselines as usually run', ['tiered_vs_broadcast_best', 'tiered_vs_idnc_hd', 'tiered_vs_idnc_best']],
+    ['Does batching repairs help? (same coder, batched vs immediate)', ['bcast_tiered_vs_broadcast_best', 'idnc_tiered_vs_idnc_best', 'tiered_vs_coded_best']],
+    ['With batching: what does coding add, and which coder?', ['tiered_vs_bcast_tiered', 'idnc_tiered_vs_bcast_tiered', 'tiered_vs_idnc_tiered']],
+    ['Delay-tolerant repair packets', ['dtc_vs_tiered', 'dtc_vs_idnc_tiered']]],
+};
+function pairLabel(k) {
+  const [a, b] = k.split('_vs_');
+  return schemeLabel(a, true) + ' vs ' + schemeLabel(b, true);
+}
+function algo() {
+  const o = ALGO[algoLoss], study = o.meta.study === 'dtc' ? 'dtc' : 'algo';
+  $('algoNote').textContent = `${o.n} windows, packet loss ${Math.round(o.channel.loss * 100)}%` + ((o.channel.het || 0) > 0 ? ` (grows with distance, het ${o.channel.het})` : '') +
+    `, background load ${Math.round(o.channel.bg * 100)}%` + (study === 'dtc' ? `, party-line receivers (overhear ${o.channel.overhear}, buffer ${o.channel.buffer}), repair hold ${o.meta.hold} s.` : '.');
+  const names = SCHEME_ORDER.filter(s => o.schemes[s]).concat(Object.keys(o.schemes).filter(s => !SCHEME_ORDER.includes(s)));
+  const p95 = names.some(n => o.schemes[n].p95_lat);
+  let t = `<tr><th>Scheme</th><th>Transmissions</th><th>Missed, strict %</th><th>Missed, excl. withdrawn %</th><th>Mean latency s</th>${p95 ? '<th>95th pct latency s</th>' : ''}</tr>`;
+  const hl = study === 'dtc' ? 'tiered' : 'coded_best';
+  names.forEach(n => {
+    const s = o.schemes[n];
+    t += `<tr class="${n === hl ? 'hl' : ''}"><td>${esc(schemeLabel(n))}</td><td>${fmt(s.n_tx)}</td><td>${fmt(s.miss_sched.map(x => 100 * x))}</td><td>${fmt(s.miss_excl.map(x => 100 * x))}</td><td>${fmt(s.mean_lat)}</td>${p95 ? `<td>${s.p95_lat ? fmt(s.p95_lat) : ''}</td>` : ''}</tr>`;
+  });
+  $('algoTable').innerHTML = t;
+  const rows = {tx: [], ms: [], me: [], la: []}, used = new Set();
+  const add = (g, k) => {
+    const p = o.paired[k]; if (!p || used.has(k)) return;
+    used.add(k);
+    const lab = pairLabel(k);
+    rows.tx.push({factor: g, label: lab, v: p.tx_saving_pct}); rows.ms.push({factor: g, label: lab, v: p.miss_strict_pts});
+    rows.me.push({factor: g, label: lab, v: p.miss_excl_pts}); rows.la.push({factor: g, label: lab, v: p.latency_gain_s});
+  };
+  GROUPS[study].forEach(([g, ks]) => ks.forEach(k => add(g, k)));
+  Object.keys(o.paired).filter(k => /_bestlazy|^tiered_h/.test(k)).forEach(k => add('Hold-time trade-off', k));
+  Object.keys(o.paired).forEach(k => add('Other comparisons', k));
+  $('algoForest').innerHTML = [['Fewer transmissions (%)', rows.tx], ['Fewer strict misses (points)', rows.ms], ['Fewer misses excl. withdrawn (points)', rows.me], ['Lower latency (seconds)', rows.la]]
+    .map(([t, r]) => `<div>${forestSvg(r, t)}</div>`).join('');
+  $('tradeWrap').classList.toggle('hidden', study !== 'dtc');
+  if (study === 'dtc') tradeoff(o);
+}
+function tradeoff(o) {
+  const pts = Object.keys(o.schemes).map(n => ({n, x: o.schemes[n].mean_lat[0], y: o.schemes[n].n_tx[0]}));
+  const holdOf = n => n === 'coded_best' ? 0 : n === 'tiered' ? +o.meta.hold : (n.match(/^tiered_h(\d+(?:\.\d+)?)$/) || [])[1];
+  const line = pts.filter(p => holdOf(p.n) !== undefined).map(p => ({...p, h: +holdOf(p.n)})).sort((a, b) => a.h - b.h);
+  const W = 620, H = 340, L = 60, B = 44, T = 14, R = 150;
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const x0 = Math.min(...xs) * 0.9, x1 = Math.max(...xs) * 1.05, y0 = Math.min(...ys) * 0.95, y1 = Math.max(...ys) * 1.03;
+  const X = v => L + (W - L - R) * (v - x0) / (x1 - x0), Y = v => H - B - (H - B - T) * (v - y0) / (y1 - y0);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="transmissions against mean latency">`;
+  for (let i = 0; i <= 4; i++) {
+    const vy = y0 + (y1 - y0) * i / 4, vx = x0 + (x1 - x0) * i / 4;
+    s += `<line x1="${L}" x2="${W - R}" y1="${Y(vy)}" y2="${Y(vy)}" stroke="var(--line)"/><text class="m" x="${L - 6}" y="${Y(vy) + 4}" text-anchor="end">${vy.toFixed(0)}</text>`;
+    s += `<text class="m" x="${X(vx)}" y="${H - B + 16}" text-anchor="middle">${vx.toFixed(1)}</text>`;
+  }
+  s += `<text class="m" x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle">mean latency (s)</text><text class="m" x="14" y="${(H - B) / 2}" transform="rotate(-90 14 ${(H - B) / 2})" text-anchor="middle">transmissions per window</text>`;
+  if (line.length > 1) s += `<polyline fill="none" stroke="var(--ok)" stroke-width="2" points="${line.map(p => X(p.x) + ',' + Y(p.y)).join(' ')}"/>`;
+  const col = n => n === 'tiered' || /^tiered_h/.test(n) ? 'var(--ok)' : n === 'coded_best' ? 'var(--ok)' : /idnc/.test(n) ? 'var(--c2)' : /bcast|broadcast/.test(n) ? 'var(--c1)' : 'var(--mut)';
+  const placed = [];
+  pts.slice().sort((a, b) => Y(a.y) - Y(b.y)).forEach(p => {
+    const lab = /^tiered_h/.test(p.n) ? `hold ${holdOf(p.n)} s` : p.n === 'coded_best' ? 'Coded best (hold 0)' : schemeLabel(p.n, true) + (p.n === 'tiered' ? ` (hold ${o.meta.hold} s)` : '');
+    const cx = X(p.x), cy = Y(p.y);
+    let ly = cy + 4;
+    while (placed.some(q => Math.abs(q.y - ly) < 13 && Math.abs(q.x - cx) < 120)) ly += 13;   // keep labels apart
+    placed.push({x: cx, y: ly});
+    s += `<circle cx="${cx}" cy="${cy}" r="${p.n === 'tiered' ? 6 : 4}" fill="${col(p.n)}"/>`;
+    if (Math.abs(ly - cy - 4) > 1) s += `<line x1="${cx + 4}" y1="${cy}" x2="${cx + 10}" y2="${ly - 4}" stroke="var(--mut)"/>`;
+    s += `<text x="${cx + 12}" y="${ly}">${esc(lab)}</text>`;
+  });
+  $('tradeoff').innerHTML = s + '</svg>';
+}
+
+/* ---------------- party-line study ---------------- */
+function partyKeys() {
+  const score = k => { const o = ALGO[k], m = o.meta; return (o.channel.het > 0 ? 10 : 0) + (m.sector === 0 ? 5 : 0) + (m.A !== 60 ? 1 : 0) + (m.reports ? 20 + m.fbloss : 0); };
+  return Object.keys(ALGO).filter(k => k.startsWith('party|')).sort((a, b) => score(a) - score(b) || ALGO[b].channel.loss - ALGO[a].channel.loss);
+}
+function partyLabel(k) {
+  const o = ALGO[k], m = o.meta;
+  return `Loss ${Math.round(o.channel.loss * 100)}%` + (o.channel.het > 0 ? ' · distance-dependent loss' : '') + (m.A !== 60 ? ` · awareness ${m.A} s` : '') + (m.sector === 0 ? ` · radius ${m.r_aware} NM` : '') + (m.reports ? ` · feedback reports ${Math.round(100 * m.fbloss)}% lost` : '');
+}
+const P_ORDER = ['unicast', 'broadcast_best', 'idnc_hd', 'idnc_best', 'coded_best', 'idnc_tiered', 'tiered', 'stgc'];
+const P_LABEL = {unicast: "Today's addressed delivery (CPDLC)", broadcast_best: 'Broadcast + max-weight', idnc_hd: 'IDNC + hard deadline (published-style)', idnc_best: 'IDNC + max-weight', coded_best: 'Coded + max-weight (immediate repair)', idnc_tiered: 'IDNC + tiered repair', tiered: 'Coded + tiered repair (XOR only)', stgc: 'STGC: tiered + random linear repair (proposed)'};
+const P_SHORT = {unicast: 'CPDLC addressed', broadcast_best: 'Broadcast best', idnc_hd: 'IDNC hd', idnc_best: 'IDNC best', coded_best: 'Coded best', idnc_tiered: 'IDNC tiered', tiered: 'Tiered (XOR)', stgc: 'STGC (proposed)'};
+function party() {
+  const o = ALGO[partyKey], m = o.meta, S = o.schemes;
+  $('partyNote').textContent = `${o.n} windows, packet loss ${Math.round(o.channel.loss * 100)}%` + (o.channel.het > 0 ? ` (grows with distance, het ${o.channel.het})` : '') +
+    `. Every clearance must reach its conflict neighbours by a hard deadline (critical) and every other aircraft in the same ` + (m.sector > 0 ? `${m.sector} NM sector` : `${m.r_aware} NM neighbourhood`) +
+    ` within ${m.A} s (awareness). Repair hold ${m.hold} s; one feedback report costs ${m.f_report} s of channel time.` +
+    (m.reports ? ` Realistic feedback: the ground station only knows what state reports told it, and ${Math.round(100 * m.fbloss)}% of reports are lost.` : ' Ideal feedback: the ground station sees every aircraft\'s true state.');
+  const names = P_ORDER.filter(n => S[n]);
+  const pct = v => v.map(x => 100 * x);
+  let t = '<tr><th>Scheme</th><th>Uplinks</th><th>Feedback reports</th><th>Channel time s</th><th>Hard-deadline misses %</th><th>Awareness misses %</th><th>Awareness latency s</th></tr>';
+  names.forEach(n => {
+    const s = S[n];
+    t += `<tr class="${n === 'stgc' ? 'hl' : ''}"><td>${esc(P_LABEL[n])}</td><td>${fmt(s.n_tx)}</td><td>${fmt(s.fb, 0)}</td><td>${fmt(s.chan, 0)}</td><td>${fmt(pct(s.crit_miss_excl))}</td><td>${fmt(pct(s.aware_miss_excl))}</td><td>${fmt(s.aware_lat)}</td></tr>`;
+  });
+  $('partyTable').innerHTML = t;
+  let cards = '';
+  if (S.unicast && S.stgc) {
+    cards += `<div class="card"><h3>Today's addressed delivery (CPDLC)</h3><div class="big ${S.unicast.crit_miss_excl[0] > 0.2 ? '' : 'ns'}" style="color:var(--bad)">${(100 * S.unicast.crit_miss_excl[0]).toFixed(0)}%</div>
+      <div class="mut">of hard deadlines missed (excluding withdrawn clearances), against <b>${(100 * S.stgc.crit_miss_excl[0]).toFixed(1)}%</b> for the proposed scheme. Awareness: ${(100 * S.unicast.aware_miss_excl[0]).toFixed(0)}% missed vs ${(100 * S.stgc.aware_miss_excl[0]).toFixed(0)}%.</div></div>`;
+    const ratio = S.stgc.chan[0] / S.unicast.chan[0];
+    cards += `<div class="card"><h3>${ratio > 1 ? 'Price: ' : ''}Feedback channel time</h3><div class="big ns">${ratio.toFixed(1)}×</div>
+      <div class="mut">channel time of the proposed scheme relative to addressed delivery, when every aircraft with a pending need reports after each uplink (${S.stgc.chan[0].toFixed(0)} s vs ${S.unicast.chan[0].toFixed(0)} s per window).${ratio > 1 ? ' Addressed delivery is cheap because it gives up on most deadlines.' : ''}</div></div>`;
+  }
+  const pp = o.paired.stgc_vs_idnc_best;
+  if (pp) cards += `<div class="card"><h3>Proposed vs best immediate IDNC</h3><div class="big ${sig(pp.tx_saving_pct) ? 'sig' : 'ns'}">${pp.tx_saving_pct[0].toFixed(1)}%</div>
+      <div class="mut">fewer uplinks (${fmt(pp.tx_saving_pct)}) ${sig(pp.tx_saving_pct) ? '✓ significant' : 'not significant'}; hard misses ${pp.crit_miss_excl_pts[0] >= 0 ? '−' : '+'}${Math.abs(pp.crit_miss_excl_pts[0]).toFixed(1)} pts, awareness misses ${pp.aware_miss_excl_pts[0] >= 0 ? '−' : '+'}${Math.abs(pp.aware_miss_excl_pts[0]).toFixed(1)} pts.</div></div>`;
+  $('partyCards').innerHTML = cards;
+  const G = [['Proposed (STGC) vs the baselines', ['stgc_vs_broadcast_best', 'stgc_vs_idnc_hd', 'stgc_vs_idnc_best', 'stgc_vs_coded_best']],
+    ['Does random linear repair help? (STGC vs XOR-only)', ['stgc_vs_tiered', 'stgc_vs_idnc_tiered']],
+    ['XOR-only tiered repair vs the baselines', ['tiered_vs_broadcast_best', 'tiered_vs_idnc_hd', 'tiered_vs_idnc_best', 'tiered_vs_coded_best', 'tiered_vs_idnc_tiered']]];
+  const rows = {tx: [], ch: [], cn: [], cm: [], am: []};
+  G.forEach(([g, ks]) => ks.forEach(k => {
+    const p = o.paired[k]; if (!p) return;
+    const [a, b] = k.split('_vs_'), lab = P_SHORT[a] + ' vs ' + P_SHORT[b];
+    rows.tx.push({factor: g, label: lab, v: p.tx_saving_pct}); rows.ch.push({factor: g, label: lab, v: p.chan_saving_pct}); rows.cn.push({factor: g, label: lab, v: p.chan_nack_saving_pct});
+    rows.cm.push({factor: g, label: lab, v: p.crit_miss_excl_pts}); rows.am.push({factor: g, label: lab, v: p.aware_miss_excl_pts});
+  }));
+  $('partyForest').innerHTML = [['Fewer uplinks (%)', rows.tx], ['Less channel time, every aircraft reports (%)', rows.ch], ['Less channel time, only aircraft that lost the packet report (%)', rows.cn],
+    ['Fewer hard-deadline misses (points)', rows.cm], ['Fewer awareness misses (points)', rows.am]].map(([t, r]) => `<div>${forestSvg(r, t)}</div>`).join('');
+}
+
+function distinct(R) {
+  const seen = new Map();
+  Object.entries(R).forEach(([k, r]) => {
+    const sigr = JSON.stringify([r.tx_vs_broadcast, r.miss_vs_broadcast, r.tx_vs_idnc, r.miss_vs_idnc, r.broadcast_miss, r.coded_miss]);
+    if (!seen.has(sigr)) seen.set(sigr, r);
+  });
+  return [...seen.values()];
+}
+function reading() {
+  const L = [];
+  if (SENS) {
+    const all = Object.values(SENS.results), R = distinct(SENS.results), n = R.length;
+    const c = k => R.filter(r => sig(r[k])).length;
+    L.push(`Across ${n} distinct settings (${all.length - n} repeated copies of the baseline not double-counted), coded beat plain broadcast on transmissions in <b>${c('tx_vs_broadcast')}</b> and on missed schedulable deadlines in <b>${c('miss_vs_broadcast')}</b> (interval excludes zero).`);
+    L.push(`Against the earlier published-style IDNC, coded was significantly better on transmissions in ${c('tx_vs_idnc')} and on missed deadlines in ${c('miss_vs_idnc')} of ${n} settings. ${c('tx_vs_idnc') + c('miss_vs_idnc') < n ? 'This is best described as a small edge at most.' : ''}`);
+    const tx = R.map(r => r.tx_vs_broadcast[0]);
+    L.push(`Transmission saving versus broadcast ranged from ${Math.min(...tx).toFixed(1)}% to ${Math.max(...tx).toFixed(1)}%.`);
+  }
+  if (EXP) {
+    const lo = Object.values(EXP), first = lo[0], last = lo[lo.length - 1];
+    if (lo.length > 1) L.push(`Missed-deadline improvement versus broadcast went from ${fmt(first.paired.coded_vs_broadcast.miss_sched_improvement_pts)} points at ${Math.round(first.channel.loss * 100)}% loss to ${fmt(last.paired.coded_vs_broadcast.miss_sched_improvement_pts)} points at ${Math.round(last.channel.loss * 100)}% loss.`);
+    const c = first.census;
+    if (c && c.sampled) L.push(`At sampled decision points, a coding opportunity existed in ${c.coding_possible} of ${c.sampled}; our greedy coder was beaten by the exact optimum in ${c.greedy_suboptimal}.`);
+  }
+  const verdict = v => sig(v) ? ' (significantly better)' : (v[0] + v[1] < 0 ? ' (significantly worse)' : ' (not significant)');
+  algoKeys().forEach(k => {
+    const o = ALGO[k], p = o.paired, tag = tabLabel(k).replace(/^[^·]*· /, '');
+    const line = (key, what) => { const q = p[key]; if (!q) return null; const bits = [['transmissions', q.tx_saving_pct, '%'], ['strict misses', q.miss_strict_pts, ' pts'], ['latency', q.latency_gain_s, ' s']].map(([n, v, u]) => `${n} ${v[0] >= 0 ? '+' : ''}${v[0].toFixed(1)}${u}${verdict(v)}`).join('; '); return `<b>${what}</b> (${tag}): ${bits}.`; };
+    const ls = o.meta.study === 'dtc'
+      ? [line('tiered_vs_idnc_hd', 'Proposed tiered repair vs published-style IDNC'), line('tiered_vs_broadcast_best', 'Proposed vs best broadcast'), line('idnc_tiered_vs_idnc_best', 'Batching repairs, IDNC'), line('tiered_vs_idnc_tiered', 'Coder choice under batching (ours vs IDNC)')]
+      : [line('coded_best_vs_idnc_best', 'Coded vs equally-improved IDNC'), line('coded_best_vs_idnc_hd', 'Full package vs published-style IDNC (hard-deadline)'), line('coded_best_vs_broadcast_best', 'Coded vs equally-improved broadcast')];
+    ls.filter(Boolean).forEach(x => L.push(x));
+  });
+  partyKeys().forEach(k => {
+    const o = ALGO[k], tag = partyLabel(k);
+    const line = (key, what) => { const q = o.paired[key]; if (!q) return null; const bits = [['uplinks', q.tx_saving_pct, '%'], ['hard-deadline misses', q.crit_miss_excl_pts, ' pts'], ['awareness misses', q.aware_miss_excl_pts, ' pts']].map(([n, v, u]) => `${n} ${v[0] >= 0 ? '+' : ''}${v[0].toFixed(1)}${u}${verdict(v)}`).join('; '); return `<b>${what}</b> (${tag}): ${bits}.`; };
+    [line('stgc_vs_idnc_best', 'Party line: proposed vs best immediate IDNC'), line('stgc_vs_broadcast_best', 'Party line: proposed vs best broadcast'), line('stgc_vs_tiered', 'Party line: random linear repair vs XOR-only tiered')].filter(Boolean).forEach(x => L.push(x));
+    if (o.schemes.unicast && o.schemes.stgc) L.push(`<b>Party line: today's addressed delivery</b> (${tag}) missed ${(100 * o.schemes.unicast.crit_miss_excl[0]).toFixed(0)}% of hard deadlines against ${(100 * o.schemes.stgc.crit_miss_excl[0]).toFixed(1)}% for the proposed scheme.`);
+  });
+  $('reading').innerHTML = '<ul>' + L.map(x => `<li>${x}</li>`).join('') + '</ul>';
+}
+</script>
+</body>
+</html>

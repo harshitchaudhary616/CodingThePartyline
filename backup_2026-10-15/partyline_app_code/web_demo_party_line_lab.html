@@ -1,0 +1,1088 @@
+<title>Party Line Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control-room page. Header + tabs; simulator = radar scope (left) with three scheme scoreboards (right), channel timeline below. */
+:root {
+  --bg: #e9edf1; --panel: #ffffff; --ink: #13202b; --muted: #566676; --line: #d3dbe2; --chip: #eef2f5;
+  --scope: #0d1a24; --scope-ink: #bcd0de; --scope-dim: #3a5568; --scope-line: #1b3142;
+  --uni: #c27a00; --bc: #4a6fa5; --cod: #00846f; --bad: #c43d3d; --good: #2f8f4e;
+  --f-disp: "Barlow Condensed", "Arial Narrow", sans-serif; --f-body: "Barlow", system-ui, sans-serif; --f-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0a1218; --panel: #111d27; --ink: #e3ecf3; --muted: #8ba0b1; --line: #223441; --chip: #172733;
+  --scope: #070f15; --scope-ink: #bcd0de; --scope-dim: #3a5568; --scope-line: #15283a;
+  --uni: #f2b035; --bc: #8fb0e0; --cod: #2fd4b8; --bad: #ff7070; --good: #5fd48a; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0a1218; --panel: #111d27; --ink: #e3ecf3; --muted: #8ba0b1; --line: #223441; --chip: #172733;
+  --scope: #070f15; --scope-ink: #bcd0de; --scope-dim: #3a5568; --scope-line: #15283a;
+  --uni: #f2b035; --bc: #8fb0e0; --cod: #2fd4b8; --bad: #ff7070; --good: #5fd48a; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--f-body); padding-block: 14px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1320px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--f-disp); font-weight: 600; letter-spacing: .01em; margin: 0; text-wrap: balance; }
+h1 { font-size: 34px; line-height: 1; }
+h2 { font-size: 24px; } h3 { font-size: 18px; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+p { margin: 0 0 .7em; max-width: 68ch; }
+code, .mono { font-family: var(--f-mono); font-size: .86em; }
+.top { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: flex-end; justify-content: space-between; padding-bottom: 12px; }
+.brand small { display: block; color: var(--muted); font-size: 14px; margin-top: 4px; max-width: 60ch; }
+nav { display: flex; gap: 4px; flex-wrap: wrap; }
+nav button { font: 600 15px var(--f-disp); letter-spacing: .06em; text-transform: uppercase; background: transparent; color: var(--muted); border: 1px solid transparent; padding: 8px 14px; border-radius: 4px; cursor: pointer; }
+nav button[aria-selected="true"] { color: var(--ink); background: var(--panel); border-color: var(--line); box-shadow: inset 0 -3px 0 var(--cod); }
+nav button:hover { color: var(--ink); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--cod); outline-offset: 2px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; min-width: 0; }
+.grid { display: grid; gap: 14px; }
+.sim-grid { grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); align-items: start; }
+@media (max-width: 920px) { .sim-grid { grid-template-columns: minmax(0, 1fr); } }
+.banner { background: var(--chip); border: 1px solid var(--line); border-left: 4px solid var(--uni); border-radius: 4px; padding: 10px 14px; margin-bottom: 14px; font-size: 14px; }
+.banner b { font-weight: 600; }
+.scope { position: relative; background: var(--scope); border-radius: 6px; overflow: hidden; aspect-ratio: 1 / 0.82; max-height: 78vh; width: 100%; }
+.scope canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.scope .hud { position: absolute; left: 10px; top: 8px; font: 500 12px var(--f-mono); color: var(--scope-ink); pointer-events: none; text-shadow: 0 0 6px var(--scope); }
+.scope .busy { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: color-mix(in srgb, var(--scope) 80%, transparent); color: var(--scope-ink); font: 600 22px var(--f-disp); letter-spacing: .1em; text-transform: uppercase; }
+.scope .busy.on { display: flex; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-top: 10px; }
+.btn { font: 600 14px var(--f-body); background: var(--ink); color: var(--bg); border: 0; padding: 8px 14px; border-radius: 4px; cursor: pointer; }
+.btn.ghost { background: var(--chip); color: var(--ink); border: 1px solid var(--line); }
+.btn:hover { filter: brightness(1.12); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button { font: 600 13px var(--f-body); background: var(--chip); color: var(--muted); border: 0; padding: 7px 12px; cursor: pointer; border-right: 1px solid var(--line); }
+.seg button:last-child { border-right: 0; }
+.seg button[data-s][aria-pressed="true"] { color: #fff; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.seg button[data-s="unicast"][aria-pressed="true"] { background: var(--uni); }
+.seg button[data-s="broadcast"][aria-pressed="true"] { background: var(--bc); }
+.seg button[data-s="coded"][aria-pressed="true"] { background: var(--cod); }
+input[type="range"] { accent-color: var(--cod); }
+.scrub { flex: 1 1 220px; min-width: 120px; }
+select, input[type="number"], textarea { font: 400 14px var(--f-body); background: var(--chip); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }
+.schemes { display: grid; gap: 10px; }
+.scheme { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; background: var(--panel); position: relative; }
+.scheme[data-s="unicast"] { --c: var(--uni); } .scheme[data-s="broadcast"] { --c: var(--bc); } .scheme[data-s="coded"] { --c: var(--cod); }
+.scheme.sel { border-color: var(--c); box-shadow: 0 0 0 1px var(--c); }
+.scheme .nm { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.scheme .nm b { font: 600 18px var(--f-disp); letter-spacing: .04em; text-transform: uppercase; color: var(--c); }
+.scheme .nm span { color: var(--muted); font-size: 12px; text-align: right; }
+.scheme .big { font: 600 44px/1 var(--f-disp); font-variant-numeric: tabular-nums; margin: 4px 0 2px; }
+.scheme .big small { font: 400 13px var(--f-body); color: var(--muted); margin-left: 6px; }
+.bar { display: flex; height: 8px; border-radius: 2px; overflow: hidden; background: var(--chip); margin: 6px 0 4px; }
+.bar i { display: block; height: 100%; }
+.bar .ok { background: var(--good); } .bar .no { background: var(--bad); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 400 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.legend em { font-style: normal; color: var(--ink); }
+.delta { font: 500 12px var(--f-mono); color: var(--muted); margin-top: 4px; min-height: 1.3em; }
+canvas.chart { width: 100%; height: 150px; display: block; }
+canvas.tl { width: 100%; height: 120px; display: block; }
+.log { font: 400 12px/1.55 var(--f-mono); color: var(--muted); max-height: 168px; overflow: hidden; font-variant-numeric: tabular-nums; }
+.log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log div.c { color: var(--cod); } .log div.l { color: var(--bad); }
+.params { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 18px; }
+.params label { display: grid; gap: 2px; font-size: 13px; color: var(--muted); }
+.params label span { display: flex; justify-content: space-between; color: var(--ink); font-weight: 500; }
+.params output { font-family: var(--f-mono); font-size: 12px; color: var(--cod); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.spacer { height: 14px; }
+[role="tabpanel"] { display: none; } [role="tabpanel"].on { display: block; }
+.charts { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.charts svg { width: 100%; height: auto; display: block; }
+svg text { font-family: var(--f-mono); fill: var(--muted); font-size: 11px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 13px var(--f-disp); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+td.n { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.scroll { overflow-x: auto; }
+pre.code { background: var(--scope); color: var(--scope-ink); padding: 12px; border-radius: 4px; overflow: auto; max-height: 300px; font: 400 12px/1.5 var(--f-mono); margin: 8px 0; }
+textarea { width: 100%; min-height: 110px; font-family: var(--f-mono); font-size: 12px; }
+.status { font: 500 13px var(--f-mono); padding: 8px 10px; border-radius: 4px; background: var(--chip); margin-top: 8px; }
+.status.err { color: var(--bad); } .status.ok { color: var(--good); }
+.pill { display: inline-block; font: 600 11px var(--f-body); letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; background: var(--chip); border: 1px solid var(--line); color: var(--muted); }
+.pill.warn { color: var(--uni); border-color: var(--uni); } .pill.bad { color: var(--bad); border-color: var(--bad); } .pill.good { color: var(--good); border-color: var(--good); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+ul.tight { margin: 0 0 .8em; padding-left: 1.2em; } ul.tight li { margin-bottom: .35em; max-width: 70ch; }
+.demo svg { width: 100%; height: auto; max-height: 340px; }
+.demo .cap { min-height: 3.2em; font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <h1>Party Line Lab</h1>
+      <small>Does index coding help CPDLC clearances reach the aircraft that need them, before the deadline? Simulated traffic, real code, all results reproducible.</small>
+    </div>
+    <nav role="tablist" aria-label="Sections">
+      <button role="tab" aria-selected="true" data-tab="sim">Simulator</button>
+      <button role="tab" aria-selected="false" data-tab="results">Results</button>
+      <button role="tab" aria-selected="false" data-tab="real">Real data</button>
+      <button role="tab" aria-selected="false" data-tab="method">Method</button>
+    </nav>
+  </div>
+
+  <!-- ============ SIMULATOR ============ -->
+  <section role="tabpanel" id="tab-sim" class="on">
+    <div class="banner"><b>Read this first.</b> This is a simulation on <span id="kindLabel">synthetic traffic</span>. In our runs, coded transmission saves only <b id="bannerSave">0.3% to 3.4%</b> of transmissions compared with plain broadcast, and the gain grows with traffic and packet loss. The big saving is against sending every clearance as a separate addressed message, which is what today's datalink does.</div>
+    <div class="grid sim-grid">
+      <div>
+        <div class="card">
+          <div class="scope" id="scopeBox">
+            <canvas id="radar" aria-label="Animated radar view of aircraft and clearance transmissions"></canvas>
+            <div class="hud" id="hud"></div>
+            <div class="busy" id="busy">Computing</div>
+          </div>
+          <div class="controls">
+            <button class="btn" id="play">Pause</button>
+            <button class="btn ghost" id="restart">Restart</button>
+            <label class="row" style="gap:6px;font-size:13px;color:var(--muted)">Speed
+              <select id="speed"><option value="2">2×</option><option value="6">6×</option><option value="15" selected>15×</option><option value="40">40×</option><option value="100">100×</option></select></label>
+            <div class="seg" id="schemeSeg" role="group" aria-label="Scheme shown on radar">
+              <button data-s="unicast" aria-pressed="false">Addressed</button>
+              <button data-s="broadcast" aria-pressed="false">Broadcast</button>
+              <button data-s="coded" aria-pressed="true">Coded</button>
+            </div>
+            <input type="range" class="scrub" id="scrub" min="0" max="1000" value="0" aria-label="Playback position">
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="card">
+          <div class="row" style="justify-content:space-between"><h3>Channel timeline</h3><span class="mono" style="color:var(--muted);font-size:12px">blocks = transmissions · line = clearances waiting</span></div>
+          <canvas id="tl" class="tl"></canvas>
+        </div>
+      </div>
+      <div class="schemes" id="schemes">
+        <div class="scheme" data-s="unicast"><div class="nm"><b>Addressed</b><span>one message per aircraft</span></div><div class="big"><span class="v">0</span><small>transmissions</small></div><div class="bar"><i class="ok"></i><i class="no"></i></div><div class="legend"></div><div class="delta"></div></div>
+        <div class="scheme" data-s="broadcast"><div class="nm"><b>Broadcast</b><span>everyone hears everything</span></div><div class="big"><span class="v">0</span><small>transmissions</small></div><div class="bar"><i class="ok"></i><i class="no"></i></div><div class="legend"></div><div class="delta"></div></div>
+        <div class="scheme" data-s="coded"><div class="nm"><b>Coded</b><span>XOR of clearances, deadline-aware</span></div><div class="big"><span class="v">0</span><small>transmissions</small></div><div class="bar"><i class="ok"></i><i class="no"></i></div><div class="legend"></div><div class="delta"></div></div>
+        <div class="card">
+          <div class="row" style="justify-content:space-between"><h3>Cumulative transmissions</h3>
+            <label style="font-size:12px;color:var(--muted)"><input type="checkbox" id="logy"> log scale</label></div>
+          <canvas id="cum" class="chart"></canvas>
+        </div>
+        <div class="card"><h3>Latest transmissions</h3><div class="log" id="log"></div></div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h3>Scenario</h3>
+        <div class="row"><button class="btn ghost" data-preset="light">Light traffic</button><button class="btn ghost" data-preset="rush">Rush hour</button><button class="btn ghost" data-preset="lossy">Lossy channel</button></div></div>
+      <div class="params" style="margin-top:10px">
+        <label><span>Arrivals per minute <output id="o_rate"></output></span><input type="range" id="p_rate" min="0.5" max="4" step="0.5" value="1.5"></label>
+        <label><span>Packet loss <output id="o_loss"></output></span><input type="range" id="p_loss" min="0" max="0.4" step="0.05" value="0.05"></label>
+        <label><span>Look-ahead horizon (s) <output id="o_H"></output></span><input type="range" id="p_H" min="120" max="600" step="60" value="300"></label>
+        <label><span>Relevance radius (NM) <output id="o_rRel"></output></span><input type="range" id="p_rRel" min="6" max="20" step="1" value="15"></label>
+        <label><span>Response margin (s) <output id="o_margin"></output></span><input type="range" id="p_margin" min="30" max="150" step="30" value="90"></label>
+        <label><span>Other channel traffic <output id="o_bg"></output></span><input type="range" id="p_bg" min="0" max="0.7" step="0.1" value="0.3"></label>
+        <label><span>Random seed</span><input type="number" id="p_seed" value="3" min="0" max="999" style="width:90px"></label>
+      </div>
+      <div class="row" style="margin-top:12px"><button class="btn" id="runBtn">Run scenario</button><span class="mono" id="runInfo" style="color:var(--muted);font-size:12px"></span></div>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <section role="tabpanel" id="tab-results">
+    <div class="banner"><b>What 20 seeds say.</b> These charts come from the Python package (<code>run_experiments.py</code>, <code>run_paired.py</code>) and are embedded as numbers. Coded transmission is nearly tied with plain broadcast at moderate load, and pulls ahead by a few percent under heavy load with a lossy channel. Addressed messaging needs several times more transmissions and collapses under load.</div>
+    <div class="grid charts">
+      <div class="card"><h3>Transmissions vs traffic</h3><div id="c_load"></div></div>
+      <div class="card"><h3>Transmissions vs packet loss</h3><div id="c_loss"></div></div>
+      <div class="card"><h3>Coded saving over broadcast</h3><div id="c_paired"></div></div>
+      <div class="card"><h3>Exact optimum on small snapshots</h3><div id="c_check"></div></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="card scroll"><h3>Paired difference, 20 seeds each</h3><table id="t_paired"></table>
+      <p style="margin-top:10px;color:var(--muted);font-size:13px">Saving = (broadcast − coded) / broadcast transmissions, paired by seed, mean ± 95% interval. Fewer misses = broadcast miss rate minus coded miss rate, in percentage points; zero means identical deadline performance, positive means coding missed fewer deadlines.</p></div>
+    <div class="spacer"></div>
+    <div class="card"><h3>Caveats on every number above</h3>
+      <ul class="tight">
+        <li>All traffic is synthetic. Clearances are generated by a simple controller model, not by real controllers.</li>
+        <li>About a third of all pairs miss their deadline under every scheme, mostly because the predicted conflict is already inside the response margin when the clearance is issued. That must be separated out before any miss rate is quoted in a paper.</li>
+        <li>The channel is a queueing model with random access delay and loss, not a full VDL Mode 2 simulation.</li>
+        <li>Side information is limited to each aircraft's own clearance plus what it has decoded. Richer side information is the main open experiment.</li>
+      </ul></div>
+  </section>
+
+  <!-- ============ REAL DATA ============ -->
+  <section role="tabpanel" id="tab-real">
+    <div class="banner"><b>Real traffic goes in here.</b> The build sandbox could not reach OpenSky (outbound requests are blocked), so no real file ships with this page. Record one on your own computer with the script below, then load it here. Aircraft paths come from the file. Clearances are still simulated, because no public dataset contains them.</div>
+    <div class="two">
+      <div class="card">
+        <h3>1 · Record tracks</h3>
+        <ol class="tight">
+          <li>Create a free OpenSky account (use your university email for the academic terms) and, if you want higher limits, an API client.</li>
+          <li>Pick a bounding box around a busy terminal area (the default is around Chennai).</li>
+          <li>Run the script. It polls every 10 s and writes a CSV.</li>
+        </ol>
+        <pre class="code" id="fetchCode"></pre>
+        <div class="row"><button class="btn ghost" id="copyFetch">Copy script</button><span class="mono" id="copyMsg" style="font-size:12px;color:var(--muted)"></span></div>
+        <p style="margin-top:10px;font-size:13px;color:var(--muted)">Run: <code>python3 fetch_opensky.py --bbox 12.0 79.3 14.0 81.0 --minutes 45 --out chennai.csv</code>. Check OpenSky's current terms and authentication before use. Historical Trino/Impala access needs separate approval.</p>
+      </div>
+      <div class="card">
+        <h3>2 · Load and replay</h3>
+        <p>Accepts the CSV from the script, an OpenSky Impala export with <code>time, icao24, lat, lon</code> columns, or one or more <code>/states/all</code> JSON snapshots.</p>
+        <div class="row"><input type="file" id="file" accept=".csv,.json,.txt"><button class="btn ghost" id="loadExample">Load example (synthetic)</button></div>
+        <textarea id="rawData" placeholder="…or paste CSV / JSON here" spellcheck="false"></textarea>
+        <div class="row" style="margin-top:8px"><button class="btn" id="replayBtn">Replay and code</button><span class="pill warn">clearances simulated</span></div>
+        <div class="status" id="realStatus">Nothing loaded yet. The example button writes a synthetic file in the same format so you can test the pipeline.</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="card scroll"><h3>Datasets considered</h3>
+      <table>
+        <tr><th>Source</th><th>What it gives</th><th>What it lacks</th><th>Status</th></tr>
+        <tr><td>OpenSky Network</td><td>Real ADS-B positions, altitude, speed, heading</td><td>No clearances or voice</td><td><span class="pill warn">run script locally</span></td></tr>
+        <tr><td>ATCO2 1-hour test set</td><td>871 transcribed ATC radio clips (Prague, Czech Republic area), useful for the mix of command types</td><td>No traffic geometry, not a CPDLC dataset</td><td><span class="pill">optional, via Hugging Face</span></td></tr>
+        <tr><td>BlueSky simulator</td><td>Independent clearance execution (scenario exporter included)</td><td>Simulated, not recorded</td><td><span class="pill warn">install locally</span></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ METHOD ============ -->
+  <section role="tabpanel" id="tab-method">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+      <div class="card demo">
+        <h3>How one transmission can serve two aircraft</h3>
+        <div class="row" style="margin:8px 0">
+          <div class="seg" id="demoScn" role="group" aria-label="Example"><button data-v="swap" aria-pressed="true">Two aircraft</button><button data-v="third" aria-pressed="false">Third aircraft</button></div>
+          <div class="seg" id="demoMode" role="group" aria-label="Mode"><button data-v="addr" aria-pressed="false">Addressed</button><button data-v="coded" aria-pressed="true">Coded</button></div>
+          <button class="btn" id="demoPlay">Play</button>
+        </div>
+        <svg id="demoSvg" viewBox="0 0 420 285" role="img" aria-label="Animated example of an XOR transmission"></svg>
+        <div class="cap" id="demoCap"></div>
+      </div>
+      <div class="card">
+        <h3>The model in one page</h3>
+        <ul class="tight">
+          <li>Each aircraft holds its own clearance (sent by the usual addressed message) plus every clearance it has decoded since.</li>
+          <li>A clearance is relevant to another aircraft when their predicted paths pass within the relevance radius inside the look-ahead horizon, or they share a resource such as the runway sequence.</li>
+          <li>Each aircraft–clearance pair has a deadline: predicted loss of separation minus processing, crew response and manoeuvre time.</li>
+          <li>A transmission is the XOR of a set of equal-length messages. An aircraft decodes message <i>m</i> only if it already holds every other message in the set.</li>
+          <li>Schemes see identical scenarios, channel and information. Only transmission choice differs.</li>
+          <li>ADS-B is used to decide relevance only. It is never treated as decoding side information.</li>
+        </ul>
+        <h3 style="margin-top:14px">What the result means</h3>
+        <p>Plain broadcast already restores the shared "party line" because every aircraft hears every clearance. Coding can only beat it when several clearances wait at once and the aircraft that need them hold exactly the right other ones. In these runs that almost never happens.</p>
+      </div>
+      <div class="card">
+        <h3>Decision for the paper</h3>
+        <ul class="tight">
+          <li><span class="pill bad">not supported</span> "Coding substantially reduces datalink load versus broadcast."</li>
+          <li><span class="pill good">supported</span> "Addressed messaging cannot sustain party-line coverage; broadcast restores it at a fraction of the load."</li>
+          <li><span class="pill warn">lead</span> The gain grows with load and loss (3.4% fewer transmissions and 3.5 points fewer misses at 3 arrivals/min, 30% loss). Whether richer side information widens it is the main open experiment.</li>
+        </ul>
+        <h3 style="margin-top:14px">Next experiments</h3>
+        <ul class="tight">
+          <li>Separate infeasible-deadline pairs from schedulable ones.</li>
+          <li>Run on recorded OpenSky geometry (Real data tab).</li>
+          <li>Re-simulate execution in BlueSky for independent clearances.</li>
+          <li>Search for the regime where exact optimal codes beat broadcast by more than a few percent.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ===== Party Line Lab engine: scenario generation, coding schemes, channel simulation =====
+   JavaScript port of the Python package in partyline_project/. All results are SIMULATION. */
+const DT = 5; // seconds per trajectory grid step
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function makeRng(seed) {
+  const r = mulberry32(seed >>> 0);
+  return {
+    u: () => r(),
+    uni: (a, b) => a + (b - a) * r(),
+    exp: (m) => -m * Math.log(1 - r()),
+    int: (n) => Math.floor(r() * n),
+    pois(l) { const L = Math.exp(-l); let k = 0, p = 1; do { k++; p *= r(); } while (p > L); return k - 1; }
+  };
+}
+
+const DEFAULTS = {
+  area: 120, rate: 1.5, durMin: 30, speed: 250, updRate: 0.25,
+  H: 300, rRel: 15, rAlert: 8, margin: 90, nRoutes: 4, vsep: 2000
+};
+const CH_DEFAULTS = { airtime: 0.4, access: 0.8, bg: 0.3, loss: 0.05 };
+
+/* ---------- scenario: trajectories on a 5 s grid ---------- */
+function newScenario(n, K) {
+  const X = [], Y = [], Z = [];
+  for (let i = 0; i < n; i++) {
+    X.push(new Float32Array(K).fill(NaN)); Y.push(new Float32Array(K).fill(NaN)); Z.push(new Float32Array(K).fill(0));
+  }
+  return { n, K, X, Y, Z, first: new Array(n).fill(0), last: new Array(n).fill(0), ids: new Array(n).fill(''), routes: [] };
+}
+
+function generateSynthetic(p, seed) {
+  p = Object.assign({}, DEFAULTS, p);
+  const rng = makeRng(seed);
+  const c = p.area / 2;
+  const routes = [];
+  for (let k = 0; k < p.nRoutes; k++) {
+    const ang = 2 * Math.PI * k / p.nRoutes + 0.3;
+    const cs = Math.cos(ang), sn = Math.sin(ang);
+    routes.push([[c + c * cs, c + c * sn], [c + 12 * cs, c + 12 * sn], [c, c], [c, c - 3]]);
+  }
+  const n = rng.pois(p.rate * p.durMin);
+  const t0s = Array.from({ length: n }, () => rng.uni(0, p.durMin * 60)).sort((a, b) => a - b);
+  const K = Math.floor((p.durMin * 60 + 1500) / DT) + 1;
+  const scn = newScenario(n, K);
+  scn.routes = routes; scn.p = p; scn.kind = 'synthetic'; scn.centre = [c, c];
+  scn.bounds = [0, 0, p.area, p.area];
+  const events = [];
+  const sched = [];
+  for (let i = 0; i < n; i++) {
+    const route = routes[rng.int(p.nRoutes)];
+    const v0 = p.speed * rng.uni(0.9, 1.1);
+    const s = [[t0s[i], v0]];
+    events.push([t0s[i], i, v0]);
+    let T = t0s[i];
+    for (;;) {
+      T += rng.exp(60 / p.updRate);
+      if (T > t0s[i] + 900) break;
+      const v = p.speed * rng.uni(0.7, 1.15);
+      s.push([T, v]); events.push([T, i, v]);
+    }
+    sched.push({ route, s });
+    scn.ids[i] = 'AC' + String(i).padStart(3, '0');
+  }
+  for (let i = 0; i < n; i++) {
+    const { route, s } = sched[i];
+    const seg = [], cum = [0];
+    for (let a = 0; a < route.length - 1; a++) {
+      const L = Math.hypot(route[a + 1][0] - route[a][0], route[a + 1][1] - route[a][1]);
+      seg.push(L); cum.push(cum[cum.length - 1] + L);
+    }
+    const total = cum[cum.length - 1];
+    let d = 0, si = 0, started = false;
+    scn.first[i] = Math.ceil(s[0][0] / DT); scn.last[i] = scn.first[i];
+    for (let k = 0; k < K; k++) {
+      const t = k * DT;
+      if (t < s[0][0]) continue;
+      while (si + 1 < s.length && s[si + 1][0] <= t) si++;
+      if (started) d += s[si][1] * DT / 3600; else started = true;
+      if (d > total) break;
+      let a = 0; while (a < seg.length - 1 && d > cum[a + 1]) a++;
+      const f = seg[a] > 0 ? (d - cum[a]) / seg[a] : 0;
+      scn.X[i][k] = route[a][0] + (route[a + 1][0] - route[a][0]) * f;
+      scn.Y[i][k] = route[a][1] + (route[a + 1][1] - route[a][1]) * f;
+      scn.last[i] = k;
+    }
+  }
+  events.sort((a, b) => a[0] - b[0]);
+  scn.clearances = buildClearances(scn, events.map(e => [e[0], e[1]]), p);
+  return scn;
+}
+
+function activeAt(scn, i, k) { return k >= 0 && k < scn.K && !Number.isNaN(scn.X[i][k]); }
+
+function buildClearances(scn, events, p) {
+  const cl = [], ver = new Array(scn.n).fill(-1);
+  const M = Math.floor(p.H / DT);
+  for (const [t, i] of events) {
+    const k0 = Math.floor(t / DT);
+    if (!activeAt(scn, i, k0) && !activeAt(scn, i, k0 + 1)) continue;
+    ver[i]++;
+    const c = { id: cl.length, ac: i, version: ver[i], t, dem: new Map() };
+    for (let j = 0; j < scn.n; j++) {
+      if (j === i || !activeAt(scn, j, k0)) continue;
+      let firstAlert = -1, close = false;
+      for (let m = 0; m <= M; m++) {
+        const k = k0 + m; if (k >= scn.K) break;
+        const xi = scn.X[i][k], xj = scn.X[j][k];
+        if (Number.isNaN(xi) || Number.isNaN(xj)) continue;
+        if (Math.abs(scn.Z[i][k] - scn.Z[j][k]) > p.vsep) continue;
+        const d = Math.hypot(xi - xj, scn.Y[i][k] - scn.Y[j][k]);
+        if (d < p.rRel) close = true;
+        if (d < p.rAlert && firstAlert < 0) firstAlert = k * DT;
+      }
+      if (firstAlert >= 0) c.dem.set(j, Math.max(t, firstAlert - p.margin));
+      else if (close) c.dem.set(j, t + p.H);
+    }
+    cl.push(c);
+  }
+  return cl;
+}
+
+/* ---------- real tracks (OpenSky-style CSV/JSON) -> scenario ---------- */
+function parseTracks(text) {
+  const rows = [];
+  text = text.trim();
+  if (text[0] === '{' || text[0] === '[') {
+    let js; try { js = JSON.parse(text); } catch (e) { throw new Error('JSON could not be parsed'); }
+    const snaps = Array.isArray(js) ? js : [js];
+    for (const s of snaps) for (const st of (s.states || [])) {
+      if (st[5] == null || st[6] == null) continue;
+      rows.push({ t: s.time, id: st[0], lat: st[6], lon: st[5], alt: (st[7] ?? st[13] ?? 0), gnd: !!st[8] });
+    }
+  } else {
+    const lines = text.split(/\r?\n/); const head = lines[0].split(',').map(s => s.trim().toLowerCase());
+    const ix = (...names) => { for (const n of names) { const k = head.indexOf(n); if (k >= 0) return k; } return -1; };
+    const it = ix('time', 'timestamp', 'lastcontact'), ii = ix('icao24', 'icao'), ia = ix('lat', 'latitude'), io = ix('lon', 'lng', 'longitude'),
+      iz = ix('baroaltitude', 'baro_altitude', 'geoaltitude', 'altitude'), ig = ix('onground');
+    if (it < 0 || ii < 0 || ia < 0 || io < 0) throw new Error('CSV needs columns: time, icao24, lat, lon (optional: baroaltitude, onground)');
+    for (let r = 1; r < lines.length; r++) {
+      if (!lines[r]) continue; const f = lines[r].split(',');
+      const lat = parseFloat(f[ia]), lon = parseFloat(f[io]), t = parseFloat(f[it]);
+      if (!isFinite(lat) || !isFinite(lon) || !isFinite(t)) continue;
+      rows.push({ t, id: f[ii].trim(), lat, lon, alt: iz >= 0 ? (parseFloat(f[iz]) || 0) : 0, gnd: ig >= 0 ? /^(true|1)$/i.test((f[ig] || '').trim()) : false });
+    }
+  }
+  if (!rows.length) throw new Error('No position rows found');
+  return rows;
+}
+
+function scenarioFromTracks(rows, p, seed) {
+  p = Object.assign({}, DEFAULTS, p);
+  const rng = makeRng(seed);
+  rows = rows.filter(r => !r.gnd);
+  const by = new Map();
+  for (const r of rows) { if (!by.has(r.id)) by.set(r.id, []); by.get(r.id).push(r); }
+  let tracks = [...by.entries()].map(([id, a]) => [id, a.sort((x, y) => x.t - y.t)]).filter(([, a]) => a.length >= 8);
+  if (tracks.length < 2) throw new Error('Need at least 2 aircraft with 8+ airborne position reports (got snapshots only?)');
+  tracks = tracks.slice(0, 90);
+  const lat0 = tracks.reduce((s, [, a]) => s + a[0].lat, 0) / tracks.length, lon0 = tracks.reduce((s, [, a]) => s + a[0].lon, 0) / tracks.length;
+  const kx = 60 * Math.cos(lat0 * Math.PI / 180);
+  const tmin = Math.min(...tracks.map(([, a]) => a[0].t)), tmax = Math.max(...tracks.map(([, a]) => a[a.length - 1].t));
+  const K = Math.floor((tmax - tmin) / DT) + 1;
+  const scn = newScenario(tracks.length, K);
+  scn.p = p; scn.kind = 'real'; scn.t0epoch = tmin; scn.centre = [0, 0];
+  let b = [1e9, 1e9, -1e9, -1e9];
+  tracks.forEach(([id, a], i) => {
+    scn.ids[i] = id.toUpperCase();
+    let q = 0, firstK = -1, lastK = 0;
+    for (let k = 0; k < K; k++) {
+      const t = tmin + k * DT;
+      if (t < a[0].t || t > a[a.length - 1].t) continue;
+      while (q + 1 < a.length - 1 && a[q + 1].t < t) q++;
+      const p0 = a[q], p1 = a[q + 1];
+      if (p1.t - p0.t > 120) continue; // gap: treat as unobserved
+      const f = p1.t === p0.t ? 0 : (t - p0.t) / (p1.t - p0.t);
+      const x = ((p0.lon + (p1.lon - p0.lon) * f) - lon0) * kx, y = ((p0.lat + (p1.lat - p0.lat) * f) - lat0) * 60;
+      scn.X[i][k] = x; scn.Y[i][k] = y; scn.Z[i][k] = (p0.alt + (p1.alt - p0.alt) * f) * 3.28084;
+      if (firstK < 0) firstK = k; lastK = k;
+      b = [Math.min(b[0], x), Math.min(b[1], y), Math.max(b[2], x), Math.max(b[3], y)];
+    }
+    scn.first[i] = Math.max(firstK, 0); scn.last[i] = lastK;
+  });
+  const pad = 8; scn.bounds = [b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad];
+  // clearance process is SIMULATED (not in the data): one at first sighting + Poisson updates
+  const events = [];
+  for (let i = 0; i < scn.n; i++) {
+    if (scn.first[i] > scn.last[i]) continue;
+    const ts = scn.first[i] * DT, te = scn.last[i] * DT;
+    events.push([ts, i]);
+    let T = ts;
+    for (;;) { T += rng.exp(60 / p.updRate); if (T > te) break; events.push([T, i]); }
+  }
+  events.sort((a, b) => a[0] - b[0]);
+  scn.clearances = buildClearances(scn, events, p);
+  return scn;
+}
+
+/* ---------- coding schemes ---------- */
+function urgencyOf(m, pending) { let u = Infinity; for (const d of pending.get(m).values()) if (d < u) u = d; return u; }
+
+function servedPairs(T, pending, known) {
+  const out = [];
+  for (const m of T) {
+    const rs = pending.get(m); if (!rs) continue;
+    for (const r of rs.keys()) {
+      let ok = true;
+      for (const x of T) if (x !== m && !known[r].has(x)) { ok = false; break; }
+      if (ok) out.push([m, r]);
+    }
+  }
+  return out;
+}
+
+function schedUnicast(pending) {
+  let best = null;
+  for (const [m, rs] of pending) for (const [r, d] of rs) {
+    if (!best || d < best[0] || (d === best[0] && (m < best[1] || (m === best[1] && r < best[2])))) best = [d, m, r];
+  }
+  return { T: [best[1]], got: [[best[1], best[2]]] };
+}
+function schedBroadcast(pending, known) {
+  let bm = -1, bu = Infinity;
+  for (const m of pending.keys()) { const u = urgencyOf(m, pending); if (u < bu || (u === bu && m < bm)) { bu = u; bm = m; } }
+  return { T: [bm], got: servedPairs([bm], pending, known) };
+}
+function schedCoded(pending, known, now) {
+  const maxSize = 6;
+  const order = [...pending.keys()].map(m => [urgencyOf(m, pending), m]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(x => x[1]);
+  const seed = order[0];
+  let T = [seed];
+  const score = (T) => { let s = 0; for (const [m, r] of servedPairs(T, pending, known)) s += 1 + 30 / Math.max(pending.get(m).get(r) - now, 1); return s; };
+  let cur = score(T);
+  for (let q = 1; q < order.length; q++) {
+    if (T.length >= maxSize) break;
+    const m = order[q], T2 = T.concat([m]), s2 = score(T2);
+    if (s2 > cur) {
+      const must = [...pending.get(seed).keys()].filter(r => T.every(x => x === seed || known[r].has(x)));
+      const sv = servedPairs(T2, pending, known);
+      if (must.every(r => sv.some(([mm, rr]) => mm === seed && rr === r))) { T = T2; cur = s2; }
+    }
+  }
+  return { T, got: servedPairs(T, pending, known) };
+}
+const SCHEDULERS = { unicast: schedUnicast, broadcast: schedBroadcast, coded: schedCoded };
+
+/* ---------- channel simulation ---------- */
+function simulate(scheme, scn, chIn, seed) {
+  const ch = Object.assign({}, CH_DEFAULTS, chIn);
+  const rng = makeRng(seed);
+  const sched = SCHEDULERS[scheme];
+  const known = Array.from({ length: scn.n }, () => new Set());
+  const pending = new Map();
+  const live = new Map(); // ac -> latest msg id
+  const cl = scn.clearances;
+  const pairs = [], pidx = new Map(); // (m*4096+r) -> index
+  const txs = [];
+  let ci = 0, t = 0;
+  const setState = (m, r, st) => { const q = pairs[pidx.get(m * 4096 + r)]; if (q && q.state === 'open') { q.state = st; q.tEnd = t; } };
+  while (ci < cl.length || pending.size) {
+    while (ci < cl.length && cl[ci].t <= t) {
+      const c = cl[ci++];
+      known[c.ac].add(c.id);
+      const old = live.get(c.ac);
+      if (old !== undefined && pending.has(old)) { for (const r of pending.get(old).keys()) setState(old, r, 'superseded'); pending.delete(old); }
+      live.set(c.ac, c.id);
+      if (c.dem.size) {
+        pending.set(c.id, new Map(c.dem));
+        for (const [r, d] of c.dem) { pidx.set(c.id * 4096 + r, pairs.length); pairs.push({ m: c.id, r, tIssue: c.t, dl: d, tDone: null, tEnd: null, state: 'open' }); }
+      }
+    }
+    for (const m of [...pending.keys()]) {
+      const rs = pending.get(m);
+      for (const [r, d] of [...rs]) if (t > d + 120) { setState(m, r, 'expired'); rs.delete(r); }
+      if (!rs.size) pending.delete(m);
+    }
+    if (!pending.size) { if (ci < cl.length) { t = Math.max(t, cl[ci].t); continue; } break; }
+    const q = pending.size;
+    const { T, got } = sched(pending, known, t);
+    const service = (ch.airtime + rng.exp(ch.access)) / (1 - ch.bg);
+    const t0 = t; t += service;
+    const rec = { t0, t1: t, T, q, res: [] };
+    for (const [m, r] of got) {
+      if (rng.u() < ch.loss) { rec.res.push([m, r, 0]); continue; }
+      known[r].add(m);
+      const rs = pending.get(m);
+      if (rs && rs.has(r)) {
+        const pq = pairs[pidx.get(m * 4096 + r)];
+        if (pq && pq.state === 'open') { pq.tDone = t; pq.state = 'done'; }
+        rs.delete(r); if (!rs.size) pending.delete(m);
+      }
+      rec.res.push([m, r, 1]);
+    }
+    txs.push(rec);
+  }
+  return summarize(scheme, pairs, txs);
+}
+
+function bisect(arr, x) { let lo = 0, hi = arr.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid] <= x) lo = mid + 1; else hi = mid; } return lo; }
+
+function summarize(scheme, pairs, txs) {
+  const ok = pairs.filter(p => p.tDone !== null && p.tDone <= p.dl);
+  const done = pairs.filter(p => p.tDone !== null);
+  const lat = done.map(p => p.tDone - p.tIssue);
+  const miss = pairs.length ? 1 - ok.length / pairs.length : 0;
+  const sortNum = a => a.sort((x, y) => x - y);
+  return {
+    scheme, pairs, txs, nTx: txs.length, nPairs: pairs.length, miss,
+    meanLat: lat.length ? lat.reduce((a, b) => a + b, 0) / lat.length : NaN,
+    // precomputed playback indexes
+    txEnd: sortNum(txs.map(x => x.t1)),
+    issueT: sortNum(pairs.map(p => p.tIssue)),
+    onTimeT: sortNum(ok.map(p => p.tDone)),
+    doneT: sortNum(done.map(p => p.tDone)),
+    failT: sortNum(pairs.filter(p => !(p.tDone !== null && p.tDone <= p.dl)).map(p => p.dl)),
+    endT: txs.length ? txs[txs.length - 1].t1 : 0
+  };
+}
+
+function runAll(scn, ch, seed) {
+  return { unicast: simulate('unicast', scn, ch, seed), broadcast: simulate('broadcast', scn, ch, seed), coded: simulate('coded', scn, ch, seed) };
+}
+
+
+</script>
+<script>
+const DATA = {"load": [{"value": 0.5, "unicast": 177.3, "broadcast": 73.65, "coded": 73.65}, {"value": 1.0, "unicast": 731.8, "broadcast": 198.6, "coded": 199.25}, {"value": 1.5, "unicast": 1310.0, "broadcast": 340.9, "coded": 339.55}, {"value": 2.0, "unicast": 1569.05, "broadcast": 500.1, "coded": 497.15}, {"value": 3.0, "unicast": 1785.5, "broadcast": 811.6, "coded": 795.7}], "loss": [{"value": 0.0, "unicast": 1279.95, "broadcast": 269.75, "coded": 269.7}, {"value": 0.05, "unicast": 1310.0, "broadcast": 340.9, "coded": 339.55}, {"value": 0.1, "unicast": 1338.2, "broadcast": 397.85, "coded": 395.95}, {"value": 0.2, "unicast": 1404.9, "broadcast": 506.2, "coded": 498.0}, {"value": 0.3, "unicast": 1467.85, "broadcast": 621.6, "coded": 611.95}], "paired": [{"setting": "rate1.5", "saving_pct": 0.325, "saving_ci": 0.436, "miss_diff_pts": 0.001, "miss_diff_ci": 0.043}, {"setting": "rate3.0", "saving_pct": 1.881, "saving_ci": 0.467, "miss_diff_pts": 0.006, "miss_diff_ci": 0.188}, {"setting": "rate3.0_loss0.3", "saving_pct": 3.375, "saving_ci": 0.741, "miss_diff_pts": 3.474, "miss_diff_ci": 1.13}, {"setting": "rate1.5_loss0.2", "saving_pct": 1.607, "saving_ci": 0.665, "miss_diff_pts": 0.046, "miss_diff_ci": 0.135}], "checkpoint": {"n": 406, "broadcast": 3.7, "greedy": 3.655, "exact": 3.648}};
+const FETCH_SCRIPT = "#!/usr/bin/env python3\n\"\"\"Record real ADS-B tracks from OpenSky Network over a bounding box -> CSV for Party Line Lab.\n\nRun this ON YOUR OWN MACHINE (the build sandbox cannot reach OpenSky).\nUsage:  python3 fetch_opensky.py --bbox 12.0 79.3 14.0 81.0 --minutes 45 --out chennai.csv\nOptional login (higher rate limits): set OPENSKY_CLIENT_ID and OPENSKY_CLIENT_SECRET\n(OAuth2 client credentials from your OpenSky account page). Check the current API terms at\nhttps://openskynetwork.github.io/opensky-api/ before use; academic use is permitted for\nresearch, and historical (Trino/Impala) access needs separate approval.\n\"\"\"\nimport argparse, csv, os, sys, time, json, urllib.request, urllib.parse\n\nTOKEN_URL = \"https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token\"\nAPI = \"https://opensky-network.org/api/states/all\"\n\ndef token():\n    cid, sec = os.environ.get(\"OPENSKY_CLIENT_ID\"), os.environ.get(\"OPENSKY_CLIENT_SECRET\")\n    if not (cid and sec): return None\n    data = urllib.parse.urlencode({\"grant_type\": \"client_credentials\", \"client_id\": cid, \"client_secret\": sec}).encode()\n    with urllib.request.urlopen(urllib.request.Request(TOKEN_URL, data=data), timeout=30) as r:\n        return json.load(r)[\"access_token\"]\n\ndef main():\n    ap = argparse.ArgumentParser()\n    ap.add_argument(\"--bbox\", nargs=4, type=float, required=True, metavar=(\"LAMIN\", \"LOMIN\", \"LAMAX\", \"LOMAX\"))\n    ap.add_argument(\"--minutes\", type=float, default=30)\n    ap.add_argument(\"--every\", type=float, default=10, help=\"poll interval, seconds (anonymous users: >=10)\")\n    ap.add_argument(\"--out\", default=\"tracks.csv\")\n    a = ap.parse_args()\n    tok = token()\n    q = urllib.parse.urlencode(dict(zip([\"lamin\", \"lomin\", \"lamax\", \"lomax\"], a.bbox)))\n    end = time.time() + a.minutes * 60\n    n = 0\n    with open(a.out, \"w\", newline=\"\") as f:\n        w = csv.writer(f)\n        w.writerow([\"time\", \"icao24\", \"callsign\", \"lat\", \"lon\", \"velocity\", \"heading\", \"baroaltitude\", \"onground\"])\n        while time.time() < end:\n            t0 = time.time()\n            try:\n                req = urllib.request.Request(f\"{API}?{q}\")\n                if tok: req.add_header(\"Authorization\", f\"Bearer {tok}\")\n                with urllib.request.urlopen(req, timeout=30) as r:\n                    js = json.load(r)\n                for s in js.get(\"states\") or []:\n                    if s[5] is None or s[6] is None: continue\n                    w.writerow([js[\"time\"], s[0], (s[1] or \"\").strip(), s[6], s[5], s[9], s[10], s[7], int(bool(s[8]))]); n += 1\n                f.flush()\n                print(f\"{time.strftime('%H:%M:%S')} rows={n}\", file=sys.stderr)\n            except Exception as e:\n                print(\"poll failed:\", e, file=sys.stderr)\n            time.sleep(max(0, a.every - (time.time() - t0)))\n    print(f\"wrote {n} rows to {a.out}\")\n\nif __name__ == \"__main__\":\n    main()\n";
+
+/* ================= helpers ================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+let _css = {}, _cssAt = 0;
+function css(n) {
+  const now = performance.now();
+  if (now - _cssAt > 400) { const cs = getComputedStyle(document.documentElement); _css = {}; _cssAt = now; _cs = cs; }
+  if (!(n in _css)) _css[n] = _cs.getPropertyValue(n).trim();
+  return _css[n];
+}
+let _cs = getComputedStyle(document.documentElement);
+const SCH = ['unicast', 'broadcast', 'coded'];
+const SCOL = { unicast: '--uni', broadcast: '--bc', coded: '--cod' };
+function fmt(n, d = 0) { return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d }) : '–'; }
+function setupCanvas(cv) {
+  const r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(10, Math.round(r.width * dpr)), h = Math.max(10, Math.round(r.height * dpr));
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { g, w: r.width, h: r.height };
+}
+
+/* ================= tabs ================= */
+function showTab(name) {
+  $$('nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name));
+  $$('[role=tabpanel]').forEach(p => p.classList.toggle('on', p.id === 'tab-' + name));
+  try { history.replaceState(null, '', '#' + name); } catch (e) {}
+  if (name === 'results') drawResults();
+  if (name === 'method') demoReset();
+}
+$$('nav button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+/* ================= simulator state ================= */
+const T_START = 700;
+const S = { scn: null, logs: null, t: 0, playing: true, speed: 15, scheme: 'coded', ptr: 0, effects: [], endT: 1, last: performance.now(), logTick: 0 };
+
+function readParams() {
+  return {
+    scen: { rate: +$('#p_rate').value, H: +$('#p_H').value, rRel: +$('#p_rRel').value, margin: +$('#p_margin').value, rAlert: Math.max(3, Math.round(+$('#p_rRel').value * 0.55)) },
+    ch: { loss: +$('#p_loss').value, bg: +$('#p_bg').value },
+    seed: +$('#p_seed').value || 0
+  };
+}
+function paintOutputs() {
+  const p = readParams();
+  $('#o_rate').textContent = p.scen.rate; $('#o_loss').textContent = Math.round(p.ch.loss * 100) + '%'; $('#o_H').textContent = p.scen.H;
+  $('#o_rRel').textContent = p.scen.rRel; $('#o_margin').textContent = p.scen.margin; $('#o_bg').textContent = Math.round(p.ch.bg * 100) + '%';
+}
+$$('.params input').forEach(i => i.addEventListener('input', paintOutputs));
+const PRESETS = { light: { rate: 0.5, loss: 0.05, H: 300, rRel: 15, margin: 90, bg: 0.3 }, rush: { rate: 3, loss: 0.05, H: 300, rRel: 15, margin: 90, bg: 0.3 }, lossy: { rate: 1.5, loss: 0.3, H: 300, rRel: 15, margin: 90, bg: 0.3 } };
+$$('[data-preset]').forEach(b => b.addEventListener('click', () => {
+  const q = PRESETS[b.dataset.preset];
+  for (const k in q) $('#p_' + k).value = q[k];
+  paintOutputs(); runScenario();
+}));
+
+function installScenario(scn, ch, seed, label) {
+  S.scn = scn; S.logs = runAll(scn, ch, seed);
+  S.endT = Math.max(...SCH.map(k => S.logs[k].endT), 60) + 20;
+  S.t = T_START; S.ptr = bisectTx(S.logs[S.scheme].txs, S.t); S.effects = []; S.tickIdx = -1;
+  $('#kindLabel').textContent = label;
+  $('#runInfo').textContent = `${scn.n} aircraft · ${scn.clearances.length} clearances · ${S.logs.coded.nPairs} aircraft–clearance pairs`;
+  $('#scrub').max = Math.round(S.endT);
+  const bc = S.logs.broadcast.nTx, cd = S.logs.coded.nTx;
+  $('#bannerSave').textContent = bc ? `${(100 * (bc - cd) / bc).toFixed(1)}% in this run (20-seed range: 0.3% to 3.4%)` : '0.3% to 3.4%';
+  updateUI(true);
+}
+function runScenario() {
+  const busy = $('#busy'); busy.classList.add('on');
+  setTimeout(() => {
+    const p = readParams();
+    const scn = generateSynthetic(p.scen, p.seed);
+    installScenario(scn, p.ch, 1000 + p.seed, 'synthetic traffic');
+    busy.classList.remove('on');
+  }, 30);
+}
+$('#runBtn').addEventListener('click', runScenario);
+
+/* ================= playback ================= */
+$('#play').addEventListener('click', () => { S.playing = !S.playing; $('#play').textContent = S.playing ? 'Pause' : 'Play'; });
+$('#restart').addEventListener('click', () => { seek(T_START); S.playing = true; $('#play').textContent = 'Pause'; });
+$('#speed').addEventListener('change', e => S.speed = +e.target.value);
+$('#scrub').addEventListener('input', e => seek(+e.target.value));
+$('#logy').addEventListener('change', () => drawCum());
+function seek(t) { S.t = Math.max(0, Math.min(S.endT, t)); S.effects = []; const tx = S.logs[S.scheme].txs; S.ptr = bisectTx(tx, S.t); }
+function bisectTx(tx, t) { let lo = 0, hi = tx.length; while (lo < hi) { const m = (lo + hi) >> 1; if (tx[m].t1 <= t) lo = m + 1; else hi = m; } return lo; }
+$$('#schemeSeg button').forEach(b => b.addEventListener('click', () => {
+  S.scheme = b.dataset.s; $$('#schemeSeg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  S.effects = []; S.ptr = bisectTx(S.logs[S.scheme].txs, S.t); updateUI(true);
+}));
+$$('.scheme').forEach(c => c.addEventListener('click', () => $(`#schemeSeg button[data-s="${c.dataset.s}"]`).click()));
+
+function label(m) { const c = S.scn.clearances[m]; return S.scn.ids[c.ac].slice(-3) + (c.version ? '.' + c.version : ''); }
+
+/* ================= radar ================= */
+function worldToScreen(w, h) {
+  const b = S.scn.bounds, bw = b[2] - b[0], bh = b[3] - b[1], pad = 26;
+  const sc = Math.min((w - 2 * pad) / bw, (h - 2 * pad) / bh);
+  const ox = (w - bw * sc) / 2, oy = (h - bh * sc) / 2;
+  return { sc, X: x => ox + (x - b[0]) * sc, Y: y => h - (oy + (y - b[1]) * sc) };
+}
+function posAt(i, t) {
+  const sc = S.scn, f = t / DT, k = Math.floor(f), a = f - k;
+  const x0 = sc.X[i][k], x1 = sc.X[i][k + 1];
+  if (Number.isNaN(x0)) return null;
+  if (Number.isNaN(x1) || k + 1 >= sc.K) return [x0, sc.Y[i][k]];
+  return [x0 + (x1 - x0) * a, sc.Y[i][k] + (sc.Y[i][k + 1] - sc.Y[i][k]) * a];
+}
+function openCounts(log, t) {
+  const cnt = new Array(S.scn.n).fill(0), late = new Array(S.scn.n).fill(0);
+  for (const p of log.pairs) {
+    if (p.tIssue > t) continue;
+    if (p.tDone !== null && p.tDone <= t) continue;
+    if (p.tEnd !== null && p.tEnd <= t) continue;
+    cnt[p.r]++; if (p.dl < t) late[p.r]++;
+  }
+  return { cnt, late };
+}
+function spawn(rec, scheme) {
+  const now = performance.now(), col = SCOL[scheme];
+  S.effects.push({ k: 'ring', t0: now, col, multi: rec.T.length > 1 });
+  const lab = rec.T.map(label).join(' ⊕ ');
+  S.effects.push({ k: 'label', t0: now, col, text: lab + (rec.T.length > 1 ? '' : ''), n: rec.res.filter(r => r[2]).length });
+  for (const [m, r, ok] of rec.res) S.effects.push({ k: 'beam', t0: now + 160, col, r, ok, multi: rec.T.length > 1 });
+}
+function drawRadar() {
+  const cv = $('#radar'); const { g, w, h } = setupCanvas(cv);
+  const sc = S.scn, log = S.logs[S.scheme], T = worldToScreen(w, h);
+  g.fillStyle = css('--scope'); g.fillRect(0, 0, w, h);
+  const cx = T.X(sc.centre[0]), cy = T.Y(sc.centre[1]);
+  // range rings
+  g.strokeStyle = css('--scope-line'); g.lineWidth = 1; g.fillStyle = css('--scope-dim'); g.font = '10px ' + css('--f-mono');
+  const maxR = Math.hypot(sc.bounds[2] - sc.bounds[0], sc.bounds[3] - sc.bounds[1]) / 2;
+  for (let r = 20; r <= maxR; r += 20) { g.beginPath(); g.arc(cx, cy, r * T.sc, 0, 7); g.stroke(); g.fillText(r + ' NM', cx + r * T.sc * 0.707 + 3, cy - r * T.sc * 0.707 - 3); }
+  g.beginPath(); g.moveTo(cx - 8, cy); g.lineTo(cx + 8, cy); g.moveTo(cx, cy - 8); g.lineTo(cx, cy + 8); g.stroke();
+  // routes
+  if (sc.routes) { g.setLineDash([3, 5]); g.strokeStyle = css('--scope-line'); for (const r of sc.routes) { g.beginPath(); r.forEach((p, i) => i ? g.lineTo(T.X(p[0]), T.Y(p[1])) : g.moveTo(T.X(p[0]), T.Y(p[1]))); g.stroke(); } g.setLineDash([]); }
+  // positions
+  const P = new Array(sc.n).fill(null);
+  for (let i = 0; i < sc.n; i++) P[i] = posAt(i, S.t);
+  const rAlert = sc.p.rAlert;
+  // conflict links
+  g.lineWidth = 1.2; g.strokeStyle = css('--bad');
+  for (let i = 0; i < sc.n; i++) if (P[i]) for (let j = i + 1; j < sc.n; j++) if (P[j]) {
+    const dx = P[i][0] - P[j][0], dy = P[i][1] - P[j][1];
+    if (dx * dx + dy * dy < rAlert * rAlert && Math.abs(sc.Z[i][Math.floor(S.t / DT)] - sc.Z[j][Math.floor(S.t / DT)]) <= sc.p.vsep) {
+      g.globalAlpha = .6; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(T.X(P[i][0]), T.Y(P[i][1])); g.lineTo(T.X(P[j][0]), T.Y(P[j][1])); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
+    }
+  }
+  // trails
+  const k = Math.floor(S.t / DT);
+  g.lineWidth = 1;
+  for (let i = 0; i < sc.n; i++) {
+    if (!P[i]) continue;
+    g.beginPath(); let started = false;
+    for (let q = Math.max(0, k - 14); q <= k; q++) { const x = sc.X[i][q]; if (Number.isNaN(x)) continue; const px = T.X(x), py = T.Y(sc.Y[i][q]); if (!started) { g.moveTo(px, py); started = true; } else g.lineTo(px, py); }
+    g.strokeStyle = css('--scope-dim'); g.stroke();
+  }
+  // awareness halos
+  const { cnt, late } = openCounts(log, S.t);
+  const col = css(SCOL[S.scheme]);
+  g.font = '10px ' + css('--f-mono');
+  for (let i = 0; i < sc.n; i++) {
+    if (!P[i]) continue;
+    const x = T.X(P[i][0]), y = T.Y(P[i][1]);
+    if (cnt[i]) {
+      g.beginPath(); g.arc(x, y, 6 + Math.min(cnt[i], 8) * 1.4, 0, 7);
+      g.strokeStyle = late[i] ? css('--bad') : css('--uni'); g.lineWidth = late[i] ? 2 : 1.4; g.globalAlpha = .9; g.stroke(); g.globalAlpha = 1;
+    }
+    g.beginPath(); g.arc(x, y, 3, 0, 7); g.fillStyle = css('--scope-ink'); g.fill();
+    g.fillStyle = css('--scope-dim'); g.fillText(sc.ids[i].slice(-4), x + 8, y - 6);
+    if (cnt[i]) { g.fillStyle = late[i] ? css('--bad') : css('--uni'); g.fillText('×' + cnt[i], x + 8, y + 6); }
+  }
+  // tower
+  g.fillStyle = css(SCOL[S.scheme]); g.save(); g.translate(cx, cy); g.rotate(Math.PI / 4); g.fillRect(-4, -4, 8, 8); g.restore();
+  g.fillStyle = css('--scope-ink'); g.fillText('TWR', cx + 9, cy + 14);
+  // effects
+  const now = performance.now(); const keep = [];
+  for (const e of S.effects) {
+    const age = now - e.t0; let life = e.k === 'ring' ? 1000 : e.k === 'label' ? 1500 : 800;
+    if (age > life) continue; keep.push(e); if (age < 0) continue;
+    const u = age / life, c = css(e.col);
+    if (e.k === 'ring') {
+      g.globalAlpha = 1 - u; g.strokeStyle = c; g.lineWidth = e.multi ? 3 : 2;
+      g.beginPath(); g.arc(cx, cy, 10 + u * Math.min(w, h) * 0.5, 0, 7); g.stroke();
+      if (e.multi) { g.beginPath(); g.arc(cx, cy, 10 + u * Math.min(w, h) * 0.38, 0, 7); g.stroke(); }
+      g.globalAlpha = 1;
+    } else if (e.k === 'beam') {
+      const p = P[e.r]; if (!p) continue;
+      const x = T.X(p[0]), y = T.Y(p[1]);
+      const reach = Math.min(1, u * 2.2);
+      g.globalAlpha = 1 - u * 0.7; g.lineWidth = e.multi ? 2.2 : 1.4;
+      g.strokeStyle = e.ok ? c : css('--bad'); g.setLineDash(e.ok ? [] : [2, 4]);
+      g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + (x - cx) * reach, cy + (y - cy) * reach); g.stroke(); g.setLineDash([]);
+      if (reach >= 1) { g.beginPath(); g.arc(x, y, 5 + u * 10, 0, 7); g.stroke(); if (!e.ok) { g.fillStyle = css('--bad'); g.fillText('lost', x + 10, y + 16); } }
+      g.globalAlpha = 1;
+    } else if (e.k === 'label') {
+      g.globalAlpha = Math.min(1, 2 * (1 - u)); g.fillStyle = c; g.font = '600 13px ' + css('--f-mono');
+      const tw = g.measureText(e.text).width; g.fillText(e.text, Math.max(6, Math.min(w - tw - 6, cx - tw / 2)), cy - 22 - u * 12);
+      g.font = '10px ' + css('--f-mono'); g.globalAlpha = 1;
+    }
+  }
+  S.effects = keep;
+  $('#hud').textContent = `${S.scn.kind === 'real' ? 'RECORDED PATHS' : S.scn.kind === 'example' ? 'EXAMPLE FILE, SYNTHETIC' : 'SYNTHETIC'} · t = ${fmt(S.t)} s · ${S.scheme.toUpperCase()} · amber ring = clearances still missing`;
+}
+
+/* ================= scoreboards, charts, timeline ================= */
+function updateUI(force) {
+  const tn = S.t;
+  const base = S.logs.broadcast;
+  for (const s of SCH) {
+    const L = S.logs[s], el = $(`.scheme[data-s="${s}"]`);
+    const tx = bisect(L.txEnd, tn), issued = bisect(L.issueT, tn), ok = bisect(L.onTimeT, tn), fail = bisect(L.failT, tn);
+    const open = Math.max(0, issued - ok - fail);
+    $('.v', el).textContent = fmt(tx);
+    const bars = $$('.bar i', el); const den = Math.max(issued, 1);
+    bars[0].style.width = (100 * ok / den) + '%'; bars[1].style.width = (100 * fail / den) + '%';
+    $('.legend', el).innerHTML = `<span>on time <em>${fmt(ok)}</em></span><span>missed <em>${fmt(fail)}</em></span><span>waiting <em>${fmt(open)}</em></span><span>of <em>${fmt(issued)}</em></span>`;
+    const atEnd = tn >= L.endT;
+    let d = '';
+    if (s === 'unicast') d = `final: ${fmt(L.nTx)} tx · ${fmt(100 * L.miss, 1)}% missed`;
+    else if (s === 'broadcast') d = `final: ${fmt(L.nTx)} tx · ${fmt(100 * L.miss, 1)}% missed`;
+    else d = `final: ${fmt(L.nTx)} tx · ${fmt(100 * L.miss, 1)}% missed · ${fmt(100 * (base.nTx - L.nTx) / Math.max(base.nTx, 1), 1)}% fewer than broadcast`;
+    $('.delta', el).textContent = d;
+    el.classList.toggle('sel', s === S.scheme);
+  }
+  $('#scrub').value = Math.round(tn);
+  drawCum();
+}
+function drawCum() {
+  const cv = $('#cum'); const { g, w, h } = setupCanvas(cv);
+  g.clearRect(0, 0, w, h);
+  const logy = $('#logy').checked, padL = 34, padB = 18, padT = 8, padR = 8;
+  const maxN = Math.max(...SCH.map(s => S.logs[s].nTx), 1), T = S.endT;
+  const yv = n => logy ? Math.log10(n + 1) / Math.log10(maxN + 1) : n / maxN;
+  const X = t => padL + (t / T) * (w - padL - padR), Y = n => h - padB - yv(n) * (h - padB - padT);
+  g.strokeStyle = css('--line'); g.lineWidth = 1; g.fillStyle = css('--muted'); g.font = '10px ' + css('--f-mono');
+  const ticks = logy ? [1, 10, 100, 1000].filter(v => v <= maxN * 1.2) : [0, .25, .5, .75, 1].map(f => Math.round(f * maxN));
+  for (const v of ticks) { g.beginPath(); g.moveTo(padL, Y(v)); g.lineTo(w - padR, Y(v)); g.stroke(); g.fillText(v, 2, Y(v) + 3); }
+  g.fillText('0', padL, h - 4); g.fillText(fmt(T) + ' s', w - padR - 40, h - 4);
+  for (const s of SCH) {
+    const e = S.logs[s].txEnd; g.beginPath(); g.moveTo(X(0), Y(0));
+    for (let i = 0; i < e.length; i += Math.max(1, Math.floor(e.length / 400))) { g.lineTo(X(e[i]), Y(i)); }
+    g.lineTo(X(e[e.length - 1] || 0), Y(e.length));
+    g.strokeStyle = css(SCOL[s]); g.lineWidth = s === S.scheme ? 2.4 : 1.4; g.globalAlpha = s === S.scheme ? 1 : .75; g.stroke(); g.globalAlpha = 1;
+  }
+  g.strokeStyle = css('--ink'); g.lineWidth = 1; g.beginPath(); g.moveTo(X(S.t), padT); g.lineTo(X(S.t), h - padB); g.stroke();
+}
+function drawTimeline() {
+  const cv = $('#tl'); const { g, w, h } = setupCanvas(cv); g.clearRect(0, 0, w, h);
+  const L = S.logs[S.scheme], t1 = S.t + 20, t0 = t1 - 150, padB = 16;
+  const X = t => ((t - t0) / (t1 - t0)) * w;
+  g.strokeStyle = css('--line'); g.fillStyle = css('--muted'); g.font = '10px ' + css('--f-mono');
+  for (let s = Math.ceil(t0 / 30) * 30; s <= t1; s += 30) { g.beginPath(); g.moveTo(X(s), 0); g.lineTo(X(s), h - padB); g.stroke(); g.fillText(s + 's', X(s) + 2, h - 4); }
+  // queue
+  const txs = L.txs; const maxQ = Math.max(1, ...txs.map(x => x.q));
+  g.beginPath(); g.strokeStyle = css('--muted'); g.globalAlpha = .6; let started = false;
+  for (const x of txs) { if (x.t1 < t0 || x.t0 > t1) continue; const yy = h - padB - (x.q / maxQ) * (h - padB - 30); if (!started) { g.moveTo(X(x.t0), yy); started = true; } g.lineTo(X(x.t0), yy); g.lineTo(X(x.t1), yy); }
+  g.stroke(); g.globalAlpha = 1;
+  // blocks
+  const bh = 22, by = 4;
+  for (const x of txs) {
+    if (x.t1 < t0 || x.t0 > t1) continue;
+    const a = X(x.t0), b = Math.max(a + 2, X(x.t1));
+    g.fillStyle = css(SCOL[S.scheme]); g.globalAlpha = x.T.length > 1 ? 1 : .55;
+    g.fillRect(a, by, b - a, bh); g.globalAlpha = 1;
+    if (x.T.length > 1) { g.fillStyle = css('--panel'); g.fillText('⊕' + x.T.length, a + 2, by + 14); }
+  }
+  g.strokeStyle = css('--ink'); g.beginPath(); g.moveTo(X(S.t), 0); g.lineTo(X(S.t), h - padB); g.stroke();
+  g.fillStyle = css('--muted'); g.fillText('max waiting: ' + maxQ, 4, h - padB - 4);
+}
+function updateLog() {
+  const L = S.logs[S.scheme], i = bisectTx(L.txs, S.t); const rows = [];
+  for (let q = i - 1; q >= Math.max(0, i - 7); q--) {
+    const x = L.txs[q], okN = x.res.filter(r => r[2]).length;
+    const cls = x.T.length > 1 ? 'c' : (okN < x.res.length ? 'l' : '');
+    rows.push(`<div class="${cls}">${String(Math.round(x.t1)).padStart(5)}s  ${x.T.map(label).join('⊕')}  → ${okN}/${x.res.length} decoded</div>`);
+  }
+  $('#log').innerHTML = rows.join('') || '<div>waiting for first transmission…</div>';
+}
+
+/* ================= main loop ================= */
+function frame(now) {
+  const dt = Math.min(0.1, (now - S.last) / 1000); S.last = now;
+  if (S.logs && $('#tab-sim').classList.contains('on')) {
+    if (S.playing) { S.t += dt * S.speed; if (S.t >= S.endT) { seek(T_START); } }
+    const tx = S.logs[S.scheme].txs;
+    while (S.ptr < tx.length && tx[S.ptr].t1 <= S.t) { if (S.t - tx[S.ptr].t1 < 12) spawn(tx[S.ptr], S.scheme); S.ptr++; }
+    drawRadar(); drawTimeline();
+    if (now - S.logTick > 100) { S.logTick = now; updateUI(); updateLog(); }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ================= results charts (SVG) ================= */
+function svgLine(el, xs, series, o) {
+  const W = 520, H = 310, m = { l: 52, r: 14, t: 34, b: 44 };
+  const logy = o.log, all = series.flatMap(s => s.y), ymax = Math.max(...all), ymin = logy ? 1 : 0;
+  const px = i => m.l + (xs.length === 1 ? 0 : i / (xs.length - 1)) * (W - m.l - m.r);
+  const py = v => logy ? H - m.b - (Math.log10(Math.max(v, 1)) - 0) / (Math.log10(ymax * 1.15)) * (H - m.t - m.b) : H - m.b - v / (ymax * 1.08) * (H - m.t - m.b);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.title}">`;
+  const ticks = logy ? [1, 10, 100, 1000].filter(v => v <= ymax * 1.15) : [0, .25, .5, .75, 1].map(f => Math.round(f * ymax));
+  for (const v of ticks) s += `<line x1="${m.l}" x2="${W - m.r}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line)"/><text x="${m.l - 6}" y="${py(v) + 4}" text-anchor="end">${v}</text>`;
+  xs.forEach((x, i) => s += `<text x="${px(i)}" y="${H - m.b + 16}" text-anchor="middle">${x}</text>`);
+  s += `<text x="${(W + m.l) / 2}" y="${H - 6}" text-anchor="middle">${o.xlabel}</text>`;
+  for (const se of series) {
+    const pts = se.y.map((v, i) => `${px(i)},${py(v)}`).join(' ');
+    s += `<polyline points="${pts}" fill="none" stroke="var(${se.col})" stroke-width="2.4" ${se.dash ? 'stroke-dasharray="6 4"' : ''}/>`;
+    se.y.forEach((v, i) => s += `<circle cx="${px(i)}" cy="${py(v)}" r="3.5" fill="var(${se.col})"/>`);
+  }
+  let lx = m.l + 8;
+  for (const se of series) { s += `<rect x="${lx}" y="6" width="10" height="10" fill="var(${se.col})"/><text x="${lx + 14}" y="15">${se.name}</text>`; lx += 20 + se.name.length * 7; }
+  return el.innerHTML = s + '</svg>';
+}
+function svgBars(el, labels, vals, errs, o) {
+  const W = 520, H = 310, m = { l: 52, r: 14, t: 34, b: 52 };
+  const ymax = Math.max(...vals.map((v, i) => v + (errs ? errs[i] : 0)), o.min || 1) * 1.15;
+  const bw = (W - m.l - m.r) / vals.length;
+  const py = v => H - m.b - v / ymax * (H - m.t - m.b);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.title}">`;
+  for (let k = 0; k <= 4; k++) { const v = ymax * k / 4; s += `<line x1="${m.l}" x2="${W - m.r}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line)"/><text x="${m.l - 6}" y="${py(v) + 4}" text-anchor="end">${v.toFixed(o.dec ?? 1)}</text>`; }
+  vals.forEach((v, i) => {
+    const x = m.l + i * bw + bw * 0.2, w = bw * 0.6, col = o.cols ? o.cols[i] : '--cod';
+    s += `<rect x="${x}" y="${py(v)}" width="${w}" height="${py(0) - py(v)}" fill="var(${col})" rx="2"/>`;
+    if (errs) s += `<line x1="${x + w / 2}" x2="${x + w / 2}" y1="${py(v - errs[i])}" y2="${py(v + errs[i])}" stroke="var(--ink)" stroke-width="1.6"/><line x1="${x + w / 2 - 6}" x2="${x + w / 2 + 6}" y1="${py(v + errs[i])}" y2="${py(v + errs[i])}" stroke="var(--ink)" stroke-width="1.6"/><line x1="${x + w / 2 - 6}" x2="${x + w / 2 + 6}" y1="${py(Math.max(v - errs[i], 0))}" y2="${py(Math.max(v - errs[i], 0))}" stroke="var(--ink)" stroke-width="1.6"/>`;
+    s += `<text x="${x + w / 2}" y="${(errs ? py(v + errs[i]) : py(v)) - 7}" text-anchor="middle" style="fill:var(--ink)">${v.toFixed(o.dec ?? 1)}</text>`;
+    s += `<text x="${x + w / 2}" y="${H - m.b + 16}" text-anchor="middle">${labels[i]}</text>`;
+  });
+  if (o.ylabel) s += `<text x="${m.l}" y="14">${o.ylabel}</text>`;
+  return el.innerHTML = s + '</svg>';
+}
+function nice(s) { const m = s.match(/rate([\d.]+)(?:_loss([\d.]+))?/); return m ? `${m[1]}/min` + (m[2] ? `, ${Math.round(m[2] * 100)}% loss` : '') : s; }
+function drawResults() {
+  if (!DATA) return;
+  const get = (name, key) => DATA[name].map(r => r[key]);
+  const xs = DATA.load.map(r => r.value);
+  svgLine($('#c_load'), xs, [
+    { name: 'Addressed', y: DATA.load.map(r => r.unicast), col: '--uni' }, { name: 'Broadcast', y: DATA.load.map(r => r.broadcast), col: '--bc' }, { name: 'Coded', y: DATA.load.map(r => r.coded), col: '--cod', dash: true }
+  ], { log: true, xlabel: 'aircraft arriving per minute', title: 'Transmissions versus traffic, log scale' });
+  svgLine($('#c_loss'), DATA.loss.map(r => r.value), [
+    { name: 'Addressed', y: DATA.loss.map(r => r.unicast), col: '--uni' }, { name: 'Broadcast', y: DATA.loss.map(r => r.broadcast), col: '--bc' }, { name: 'Coded', y: DATA.loss.map(r => r.coded), col: '--cod', dash: true }
+  ], { log: true, xlabel: 'packet loss probability', title: 'Transmissions versus packet loss, log scale' });
+  svgBars($('#c_paired'), DATA.paired.map(r => nice(r.setting)), DATA.paired.map(r => r.saving_pct), DATA.paired.map(r => r.saving_ci), { title: 'Paired saving of coded over broadcast', ylabel: '% fewer transmissions (mean ± 95% CI)', dec: 1, min: 3 });
+  const ck = DATA.checkpoint;
+  svgBars($('#c_check'), ['Broadcast', 'Greedy XOR', 'Exact optimum'], [ck.broadcast, ck.greedy, ck.exact], null, { title: 'Transmissions per snapshot', ylabel: `avg transmissions, ${ck.n} snapshots (≤5 messages)`, dec: 2, cols: ['--bc', '--cod', '--cod'] });
+  $('#t_paired').innerHTML = '<tr><th>Setting</th><th>Saving</th><th>95% interval</th><th>Fewer misses with coding</th></tr>' + DATA.paired.map(r =>
+    `<tr><td>${nice(r.setting)} arrivals${/loss/.test(r.setting) ? '' : ', 5% loss'}</td><td class="n">${r.saving_pct.toFixed(2)}%</td><td class="n">±${r.saving_ci.toFixed(2)}</td><td class="n">${r.miss_diff_pts.toFixed(3)} pts ± ${r.miss_diff_ci.toFixed(3)}</td></tr>`).join('');
+}
+
+/* ================= real data ================= */
+$('#fetchCode').textContent = FETCH_SCRIPT;
+$('#copyFetch').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(FETCH_SCRIPT); $('#copyMsg').textContent = 'Copied'; }
+  catch (e) { const r = document.createRange(); r.selectNodeContents($('#fetchCode')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('#copyMsg').textContent = 'Selected, press copy'; }
+});
+const EX = { on: false };
+$('#rawData').addEventListener('input', () => { EX.on = false; });
+$('#file').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return; EX.on = false;
+  const rd = new FileReader(); rd.onload = () => { $('#rawData').value = rd.result; status(`Loaded ${f.name} (${fmt(f.size / 1024)} KB). Press Replay and code.`, 'ok'); }; rd.readAsText(f);
+});
+function status(msg, cls) { const s = $('#realStatus'); s.textContent = msg; s.className = 'status ' + (cls || ''); }
+$('#loadExample').addEventListener('click', () => {
+  const sc = generateSynthetic({ rate: 1.2, durMin: 20 }, 11);
+  let csv = 'time,icao24,callsign,lat,lon,velocity,heading,baroaltitude,onground\n';
+  const kx = 60 * Math.cos(13 * Math.PI / 180);
+  for (let i = 0; i < sc.n; i++) for (let k = sc.first[i]; k <= sc.last[i]; k += 2)
+    if (!Number.isNaN(sc.X[i][k])) csv += `${1760000000 + k * DT},ex${i.toString(16).padStart(4, '0')},EX${i},${(13 + (sc.Y[i][k] - 60) / 60).toFixed(5)},${(80.2 + (sc.X[i][k] - 60) / kx).toFixed(5)},130,90,3000,0\n`;
+  $('#rawData').value = csv; EX.on = true;
+  status('Example loaded: SYNTHETIC tracks written in OpenSky CSV format, not real traffic. Press Replay and code.', 'ok');
+});
+$('#replayBtn').addEventListener('click', () => {
+  try {
+    const rows = parseTracks($('#rawData').value);
+    $('#busy').classList.add('on');
+    setTimeout(() => {
+      try {
+        const p = readParams();
+        const scn = scenarioFromTracks(rows, p.scen, p.seed);
+        if (EX.on) scn.kind = 'example';
+        installScenario(scn, p.ch, 1000 + p.seed, EX.on ? 'a SYNTHETIC example file (not real traffic)' : 'recorded aircraft paths with simulated clearances');
+        const ex = EX.on;
+        status(`Replaying ${scn.n} aircraft over ${fmt(scn.K * DT / 60, 1)} min. ${ex ? 'This is the synthetic example. ' : ''}Clearances are simulated. Open the Simulator tab.`, 'ok');
+        showTab('sim');
+      } catch (e) { status(e.message, 'err'); }
+      $('#busy').classList.remove('on');
+    }, 30);
+  } catch (e) { status(e.message, 'err'); }
+});
+
+/* ================= method demo ================= */
+const DEMO = {
+  swap: { ac: [{ n: 'A', has: ['a'], want: 'b' }, { n: 'B', has: ['b'], want: 'a' }], msgs: ['a', 'b'] },
+  third: { ac: [{ n: 'A', has: ['a'], want: 'b' }, { n: 'B', has: ['b'], want: 'a' }, { n: 'C', has: ['c'], want: 'a' }], msgs: ['a', 'b', 'c'] }
+};
+const D = { scn: 'swap', mode: 'coded', anim: 0, raf: 0 };
+function demoTx() {
+  const sc = DEMO[D.scn];
+  if (D.mode === 'addr') return sc.ac.map(a => ({ T: [a.want], to: [a.n] }));
+  if (D.scn === 'swap') return [{ T: ['a', 'b'], to: ['A', 'B'] }];
+  return [{ T: ['a', 'b'], to: ['A', 'B', 'C'] }, { T: ['a'], to: ['C'], note: 'repair' }];
+}
+function demoDraw(step, prog) {
+  const sc = DEMO[D.scn], tx = demoTx(), svg = $('#demoSvg');
+  const n = sc.ac.length, pos = sc.ac.map((a, i) => ({ x: 70 + i * (280 / Math.max(n - 1, 1)), y: 205 }));
+  const tw = { x: 210, y: 40 };
+  const have = sc.ac.map(a => new Set(a.has));
+  let s = `<rect x="${tw.x - 10}" y="${tw.y - 10}" width="20" height="20" transform="rotate(45 ${tw.x} ${tw.y})" fill="var(--cod)"/><text x="${tw.x + 20}" y="${tw.y + 4}">tower</text>`;
+  const results = [];
+  for (let q = 0; q < tx.length; q++) {
+    const t = tx[q];
+    const done = q < step || (q === step && prog > 0.9);
+    t.to.forEach(nm => {
+      const i = sc.ac.findIndex(a => a.n === nm), a = sc.ac[i];
+      const other = t.T.filter(m => m !== a.want);
+      const ok = t.T.includes(a.want) && other.every(m => have[i].has(m));
+      if (done) { if (ok) have[i].add(a.want); results.push({ i, ok, q }); }
+    });
+  }
+  sc.ac.forEach((a, i) => {
+    s += `<circle cx="${pos[i].x}" cy="${pos[i].y}" r="22" fill="var(--chip)" stroke="var(--line)"/><text x="${pos[i].x}" y="${pos[i].y + 4}" text-anchor="middle" style="fill:var(--ink);font-weight:500">${a.n}</text>`;
+    s += `<text x="${pos[i].x}" y="${pos[i].y + 42}" text-anchor="middle">holds ${[...have[i]].join(', ')}</text><text x="${pos[i].x}" y="${pos[i].y + 56}" text-anchor="middle">wants ${a.want}</text>`;
+  });
+  if (step < tx.length) {
+    const t = tx[step], col = t.T.length > 1 ? 'var(--cod)' : 'var(--uni)';
+    t.to.forEach(nm => {
+      const i = sc.ac.findIndex(a => a.n === nm);
+      const f = Math.min(1, prog * 1.25);
+      s += `<line x1="${tw.x}" y1="${tw.y}" x2="${tw.x + (pos[i].x - tw.x) * f}" y2="${tw.y + (pos[i].y - 22 - tw.y) * f}" stroke="${col}" stroke-width="3" stroke-linecap="round"/>`;
+    });
+    s += `<text x="${tw.x}" y="${tw.y + 36}" text-anchor="middle" style="fill:${col};font-size:14px;font-weight:500">${t.T.join(' ⊕ ')}</text>`;
+  }
+  results.filter(r => r.q === Math.min(step, tx.length - 1) || step >= tx.length).forEach(r => {
+    s += `<text x="${pos[r.i].x}" y="${pos[r.i].y - 30}" text-anchor="middle" style="font-size:16px;font-weight:600;fill:${r.ok ? 'var(--good)' : 'var(--bad)'}">${r.ok ? '✓ decoded' : '✗ cannot decode'}</text>`;
+  });
+  svg.innerHTML = s;
+  const cnt = tx.length;
+  $('#demoCap').innerHTML = D.mode === 'addr'
+    ? `Addressed: the tower sends each aircraft the clearance it lacks, <b>${cnt} transmissions</b>. Nobody else is guaranteed to hear them.`
+    : D.scn === 'swap'
+      ? `Coded: A holds <i>a</i> and B holds <i>b</i>. One transmission of <i>a ⊕ b</i> lets A recover <i>b</i> and B recover <i>a</i>. <b>1 transmission instead of 2.</b>`
+      : `Coded: C holds <i>c</i>, not <i>b</i>, so <i>a ⊕ b</i> is useless to it and a second transmission is needed. <b>${cnt} transmissions, no saving.</b> Real sectors look like this far more often than the two-aircraft case.`;
+}
+function demoPlay() {
+  cancelAnimationFrame(D.raf);
+  const tx = demoTx(); let t0 = performance.now();
+  const loop = now => {
+    const el = (now - t0) / 1400, step = Math.floor(el), prog = el - step;
+    if (step >= tx.length) { demoDraw(tx.length, 1); return; }
+    demoDraw(step, prog); D.raf = requestAnimationFrame(loop);
+  };
+  D.raf = requestAnimationFrame(loop);
+}
+function demoReset() { cancelAnimationFrame(D.raf); demoDraw(0, 0); }
+$('#demoPlay').addEventListener('click', demoPlay);
+$$('#demoScn button').forEach(b => b.addEventListener('click', () => { D.scn = b.dataset.v; $$('#demoScn button').forEach(x => x.setAttribute('aria-pressed', x === b)); demoReset(); }));
+$$('#demoMode button').forEach(b => b.addEventListener('click', () => { D.mode = b.dataset.v; $$('#demoMode button').forEach(x => x.setAttribute('aria-pressed', x === b)); demoReset(); }));
+
+/* ================= boot ================= */
+paintOutputs();
+const startTab = (location.hash || '').replace('#', '');
+if (['results', 'real', 'method'].includes(startTab)) showTab(startTab);
+runScenario();
+requestAnimationFrame(frame);
+window.addEventListener('resize', () => { _cssAt = 0; });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { _cssAt = 0; });
+</script>

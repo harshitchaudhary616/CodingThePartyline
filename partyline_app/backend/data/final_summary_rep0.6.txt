@@ -1,0 +1,63 @@
+airspaces ['4', '5', '8', '9', '11', '12', '13', '14'], loss 0.3, lossy state reports (loss 0.6)
+windows per airspace: 4:17, 5:18, 8:4, 9:11, 11:11, 12:11, 13:11, 14:11
+
+== critical weight chosen on the other airspaces, evaluated on the held-out one (hard miss %, awareness miss %)
+scheme                     4           5           8           9          11          12          13          14   (chosen weight when this airspace is held out)
+stgc                      10           5          10           5           5           5          10          10
+stgc2                     10          10          10          10          10          10          10          10
+idnc_cls                  10          10          10          10          10          10          10          10
+broadcast_cls             10          10          10          10          10          10          10          10
+coded_cls                 10          10          10          10          10          10          10          10
+tiered_cls                10          10          10          10          10          10          10          10
+idnc_tiered_cls           10          10          10          10          10          10          10          10
+
+== held-out results pooled over airspaces (mean over windows; weight-dependent schemes use their held-out weight)
+scheme                uplinks    channel s    hard miss   aware miss
+unicast                 330.6        148.8         92.0         97.4
+broadcast_best          227.4        781.1         13.9         34.7
+idnc_hd                 224.6        776.2         13.0         43.0
+idnc_best               211.3        742.6         11.8         40.0
+coded_best              210.1        732.8         12.1         37.9
+tiered                  202.6        728.2         11.9         37.6
+idnc_tiered             204.5        735.8         12.0         39.4
+rlnc_sys                176.7        602.9          9.2         37.7
+rlnc_group              211.4        655.3         11.7         37.0
+stgc                    190.0        688.4          3.9         25.3
+stgc2                   181.5        651.6          0.5         22.2
+idnc_cls                191.4        666.5          0.3         30.5
+broadcast_cls           220.3        730.9          5.3         23.2
+coded_cls               198.8        685.4          6.4         27.1
+tiered_cls              190.4        673.2          5.7         26.0
+idnc_tiered_cls         185.6        662.9          0.2         30.2
+
+== paired differences, first scheme minus baseline, held-out weights; 95% CI from the two-level block bootstrap
+   uplinks and channel in % saving (positive = first uses less); misses in percentage points (negative = first misses less)
+comparison                                     uplinks                 channel s                 hard miss                aware miss
+stgc2 vs unicast                +45.7 [ +39.3, +55.5]*   -317.3 [-435.7,-166.6]-    -91.5 [ -95.8, -88.1]*    -75.2 [ -83.9, -70.2]*
+stgc2 vs broadcast_best         +21.6 [ +17.9, +26.8]*    +19.9 [ +15.0, +26.1]*    -13.4 [ -17.3,  -7.6]*    -12.5 [ -16.2,  -7.5]*
+stgc2 vs idnc_hd                +20.8 [ +16.3, +27.5]*    +20.9 [ +14.0, +30.6]*    -12.5 [ -16.9,  -6.8]*    -20.8 [ -25.4, -14.4]*
+stgc2 vs idnc_best              +15.3 [ +12.5, +20.2]*    +14.4 [ +11.1, +19.1]*    -11.3 [ -15.2,  -5.8]*    -17.8 [ -23.0, -10.9]*
+stgc2 vs coded_best             +14.9 [ +11.8, +19.6]*    +13.3 [  +9.8, +17.5]*    -11.7 [ -15.6,  -6.0]*    -15.8 [ -20.3,  -9.6]*
+stgc2 vs tiered                 +10.7 [  +8.4, +13.2]*    +11.2 [  +8.7, +14.3]*    -11.4 [ -15.7,  -6.1]*    -15.4 [ -20.1,  -9.2]*
+stgc2 vs idnc_tiered            +11.2 [  +9.6, +12.9]*    +11.9 [  +9.9, +14.9]*    -11.5 [ -15.6,  -6.2]*    -17.3 [ -22.3, -10.9]*
+stgc2 vs rlnc_sys                -0.3 [  -6.5,  +8.8]      -4.9 [  -9.2,  +2.4]      -8.7 [ -11.0,  -6.2]*    -15.5 [ -20.4,  -9.0]*
+stgc2 vs rlnc_group             +15.5 [ +12.3, +20.6]*     +4.2 [  -0.4, +11.2]     -11.2 [ -14.1,  -7.2]*    -14.8 [ -19.4,  -8.8]*
+stgc2 vs broadcast_cls          +18.7 [ +15.5, +23.6]*    +14.2 [  +9.6, +20.2]*     -4.8 [  -6.9,  -2.3]*     -1.0 [  -2.4,  +0.4] 
+stgc2 vs idnc_cls                +7.1 [  +1.6, +14.6]*     +6.0 [  +1.0, +12.6]*     +0.2 [  +0.1,  +0.4]-     -8.3 [ -11.5,  -4.8]*
+stgc2 vs coded_cls              +10.3 [  +6.3, +16.5]*     +8.1 [  +4.0, +13.8]*     -5.9 [  -8.2,  -2.6]*     -4.9 [  -6.4,  -3.3]*
+stgc2 vs tiered_cls              +5.4 [  +3.2,  +9.5]*     +4.8 [  +2.4,  +8.6]*     -5.2 [  -7.2,  -2.2]*     -3.8 [  -4.9,  -2.2]*
+stgc2 vs idnc_tiered_cls         +2.9 [  +0.8,  +6.1]*     +3.2 [  +0.9,  +6.4]*     +0.3 [  +0.1,  +0.5]-     -8.0 [ -10.8,  -4.8]*
+stgc2 vs stgc                    +3.7 [  +1.4,  +5.5]*     +4.1 [  +1.7,  +6.5]*     -3.5 [  -5.2,  -1.8]*     -3.2 [  -4.6,  -1.5]*
+idnc_cls vs idnc_best            +8.3 [  +4.5, +11.3]*     +8.6 [  +5.3, +11.6]*    -11.6 [ -15.6,  -6.0]*     -9.5 [ -13.4,  -5.3]*
+stgc vs idnc_cls                 +3.1 [  -3.5, +12.1]      +1.5 [  -4.9,  +9.8]      +3.7 [  +1.9,  +5.7]-     -5.2 [  -7.6,  -2.6]*
+  * = CI excludes 0 in favour of the first scheme, - = in favour of the baseline
+
+== per airspace: stgc2 vs idnc_cls, hard-miss difference in points (negative = stgc2 better) and uplink saving %
+           4  hard miss  +0.19 pts   uplinks   +2.3 %
+           5  hard miss  +0.23 pts   uplinks   +1.9 %
+           8  hard miss  +0.40 pts   uplinks   +1.6 %
+           9  hard miss  +0.00 pts   uplinks  +15.3 %
+          11  hard miss  +0.00 pts   uplinks  +30.0 %
+          12  hard miss  +0.02 pts   uplinks   +6.3 %
+          13  hard miss  +0.48 pts   uplinks   +1.6 %
+          14  hard miss  +0.61 pts   uplinks   +0.1 %

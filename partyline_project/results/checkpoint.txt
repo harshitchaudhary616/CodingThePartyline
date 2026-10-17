@@ -1,0 +1,5 @@
+snapshots=406
+greedy_equals_exact=0.9926
+mean_uncoded_broadcast=3.700
+mean_greedy=3.655
+mean_exact_linear=3.648

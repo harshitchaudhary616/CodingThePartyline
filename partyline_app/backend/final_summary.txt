@@ -1,0 +1,26 @@
+Final extension results, critical weight 10, loss 0.3, airspaces 4 5 8 9 11 12 13 14
+  uplinks: % saved by STGC2; misses: points (negative = STGC2 better); * STGC2 better, - STGC2 worse (95% bootstrap)
+
+##### CONFLICT-DRIVEN CLEARANCES (pure conflict traffic)
+=== ideal feedback   [8 airspaces]
+comparison                                    uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+STGC2 vs class-blind IDNC               +1.1 [  -0.8,  +4.1]         -0.4 [  -0.8,  -0.1]*        -0.5 [  -0.8,  -0.2]*        -7.2 [  -9.3,  -3.9]*
+STGC2 vs class-aware IDNC               +0.2 [  -2.0,  +2.3]         -0.0 [  -0.1,  +0.0]         -0.0 [  -0.1,  +0.0]         -4.2 [  -5.8,  -2.0]*
+
+=== 60% of reports lost   [8 airspaces]
+comparison                                    uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+STGC2 vs class-blind IDNC               +6.8 [  +2.9, +12.1]*        -0.4 [  -0.8,  -0.1]*        -0.4 [  -0.8,  +0.1]        -12.5 [ -14.9,  -9.0]*
+STGC2 vs class-aware IDNC               +3.9 [  +0.6,  +9.2]*        +0.0 [  -0.0,  +0.1]         +0.0 [  -0.1,  +0.1]         -6.8 [  -8.8,  -4.1]*
+
+##### CONTENTION, 2 competing stations, p=0.05, 60% lost
+=== 60% of reports lost   [8 airspaces]
+comparison                                    uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+STGC2 vs class-blind IDNC              +12.9 [  +9.7, +18.2]*       -20.0 [ -25.0, -13.1]*       -13.5 [ -18.2,  -7.3]*       -14.3 [ -18.8,  -9.3]*
+STGC2 vs class-aware IDNC               +6.3 [  +1.1, +13.7]*        +4.3 [  +2.7,  +5.5]-        +0.5 [  +0.0,  +1.3]-        -9.2 [ -12.6,  -5.7]*
+
+##### CONTENTION, 6 competing stations, p=0.05, 60% lost
+=== 60% of reports lost   [8 airspaces]
+comparison                                    uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+STGC2 vs class-blind IDNC               +8.8 [  +6.3, +12.7]*       -19.7 [ -23.4, -13.7]*       -14.9 [ -19.3,  -8.9]*       -11.8 [ -15.3,  -8.0]*
+STGC2 vs class-aware IDNC               +4.8 [  +1.3,  +9.8]*        +5.0 [  +3.0,  +6.7]-        +1.2 [  +0.4,  +2.2]-        -9.3 [ -12.9,  -5.1]*
+

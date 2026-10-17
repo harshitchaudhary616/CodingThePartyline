@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Party Line Lab 3D</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #050b11; --glass: rgba(10, 20, 30, .72); --line: rgba(120, 170, 200, .22); --ink: #e3eef6; --muted: #8aa3b5;
+  --uni: #f2b035; --bc: #8fb0e0; --cod: #2fd4b8; --bad: #ff6b6b; --good: #5fd48a;
+  --disp: "Barlow Condensed", "Arial Narrow", sans-serif; --body: "Barlow", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 400 14px/1.45 var(--body); overflow: hidden; }
+canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+canvas#view:active { cursor: grabbing; }
+.glass { background: var(--glass); border: 1px solid var(--line); border-radius: 8px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+#top { position: fixed; left: 14px; top: 12px; right: 14px; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; pointer-events: none; }
+#top > * { pointer-events: auto; }
+#brand { padding: 10px 14px; max-width: 560px; }
+#brand h1 { margin: 0; font: 700 28px/1 var(--disp); letter-spacing: .02em; }
+#brand p { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; }
+#banner { padding: 8px 12px; margin-top: 8px; border-left: 3px solid var(--uni); font-size: 12.5px; max-width: 560px; }
+#banner.real { border-left-color: var(--good); }
+#right { width: 300px; display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 150px); overflow: auto; }
+.card { padding: 9px 12px; border-left: 3px solid var(--c, var(--line)); cursor: pointer; }
+.card.sel { box-shadow: 0 0 0 1px var(--c); }
+.card .nm { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.card .nm b { font: 700 16px var(--disp); letter-spacing: .08em; text-transform: uppercase; color: var(--c); }
+.card .nm span { font-size: 11px; color: var(--muted); }
+.card .big { font: 700 36px/1 var(--disp); font-variant-numeric: tabular-nums; margin: 2px 0; }
+.card .big small { font: 400 12px var(--body); color: var(--muted); margin-left: 6px; }
+.bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,.08); margin: 4px 0; }
+.bar i { display: block; height: 100%; } .bar .ok { background: var(--good); } .bar .no { background: var(--bad); }
+.mono { font: 400 11px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+#bottom { position: fixed; left: 14px; right: 14px; bottom: 12px; padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+button, select, input { font: 500 13px var(--body); color: var(--ink); }
+button { background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 5px; padding: 6px 11px; cursor: pointer; }
+button:hover { background: rgba(255,255,255,.16); }
+button.primary { background: var(--cod); color: #04201b; border-color: var(--cod); font-weight: 600; }
+button.on { background: rgba(47,212,184,.25); border-color: var(--cod); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cod); outline-offset: 2px; }
+.seg { display: inline-flex; } .seg button { border-radius: 0; margin-left: -1px; } .seg button:first-child { border-radius: 5px 0 0 5px; margin-left: 0; } .seg button:last-child { border-radius: 0 5px 5px 0; }
+.seg button[data-s="unicast"].on { background: rgba(242,176,53,.3); border-color: var(--uni); }
+.seg button[data-s="broadcast"].on { background: rgba(143,176,224,.3); border-color: var(--bc); }
+input[type=range] { accent-color: var(--cod); }
+select, input[type=text], input[type=number] { background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 5px; padding: 5px 8px; }
+#scrub { flex: 1 1 200px; min-width: 100px; }
+#drawer { position: fixed; left: 14px; top: 215px; width: 300px; max-height: calc(100vh - 290px); overflow: auto; padding: 12px; display: none; }
+#drawer.open { display: block; }
+#drawer h3 { margin: 12px 0 6px; font: 600 13px var(--disp); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+#drawer h3:first-child { margin-top: 0; }
+.field { display: grid; gap: 1px; margin-bottom: 7px; font-size: 12.5px; color: var(--muted); }
+.field span { display: flex; justify-content: space-between; color: var(--ink); }
+.field output { font: 500 12px var(--mono); color: var(--cod); }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#msg { font: 500 12px var(--mono); margin-top: 6px; color: var(--muted); }
+#msg.bad { color: var(--bad); } #msg.ok { color: var(--good); }
+#hud { position: fixed; left: 50%; transform: translateX(-50%); bottom: 78px; width: min(900px, 92vw); font: 500 12px var(--mono); color: var(--muted); text-shadow: 0 0 8px #000; pointer-events: none; text-align: center; }
+#busy { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(5,11,17,.7); font: 700 26px var(--disp); letter-spacing: .14em; text-transform: uppercase; z-index: 5; }
+#busy.on { display: flex; }
+#results { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 6; background: rgba(5,11,17,.6); }
+#results.open { display: flex; }
+#results .box { max-width: 640px; width: calc(100% - 28px); max-height: 80vh; overflow: auto; padding: 16px; }
+#results table { width: 100%; border-collapse: collapse; font: 400 12.5px var(--mono); }
+#results th, #results td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+@media (max-width: 820px) { #right { position: fixed; right: 10px; bottom: 74px; width: 210px; max-height: 38vh; } #brand p, #banner { display: none; } #drawer { top: 70px; } .card .big { font-size: 26px; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<canvas id="view" aria-label="3D view of aircraft and clearance transmissions"></canvas>
+<div id="hud"></div>
+<div id="top">
+  <div>
+    <div id="brand" class="glass"><h1>Party Line Lab 3D</h1><p>Clearance delivery over a shared datalink: addressed, broadcast, or coded. Drag to orbit, scroll to zoom.</p></div>
+    <div id="banner" class="glass">Connecting to the backend…</div>
+  </div>
+  <div id="right"></div>
+</div>
+<div id="drawer" class="glass">
+  <h3>Server</h3>
+  <div class="row"><input type="text" id="server" style="flex:1" aria-label="Backend address"><button id="connect">Connect</button></div>
+  <h3>Data source</h3>
+  <select id="dataset" style="width:100%" aria-label="Dataset"></select>
+  <div class="row" style="margin-top:6px"><button id="demoBtn">Add synthetic demo file</button><button id="refreshBtn">Refresh</button></div>
+  <h3>Record real traffic (OpenSky)</h3>
+  <div class="row"><input type="number" step="0.1" id="b0" value="12.0" style="width:62px" aria-label="Lat min"><input type="number" step="0.1" id="b1" value="79.3" style="width:62px" aria-label="Lon min"><input type="number" step="0.1" id="b2" value="14.0" style="width:62px" aria-label="Lat max"><input type="number" step="0.1" id="b3" value="81.0" style="width:62px" aria-label="Lon max"></div>
+  <div class="row" style="margin-top:6px"><input type="number" id="mins" value="45" style="width:62px" aria-label="Minutes"><span class="mono">minutes</span><button id="recBtn">Start recording</button></div>
+  <h3>Scenario</h3>
+  <div class="row" style="margin-bottom:8px"><button data-preset="light">Light</button><button data-preset="rush">Rush hour</button><button data-preset="lossy">Lossy</button><button data-preset="heavy">Heavy + lossy</button></div>
+  <label class="field" id="f_rate"><span>Arrivals per minute <output></output></span><input type="range" id="p_rate" min="0.5" max="4" step="0.5" value="1.5"></label>
+  <label class="field"><span>Packet loss <output></output></span><input type="range" id="p_loss" min="0" max="0.4" step="0.05" value="0.05"></label>
+  <label class="field"><span>Look-ahead horizon (s) <output></output></span><input type="range" id="p_H" min="120" max="600" step="60" value="300"></label>
+  <label class="field"><span>Relevance radius (NM) <output></output></span><input type="range" id="p_rRel" min="6" max="20" step="1" value="15"></label>
+  <label class="field"><span>Response margin (s) <output></output></span><input type="range" id="p_margin" min="30" max="150" step="30" value="90"></label>
+  <label class="field"><span>Other channel traffic <output></output></span><input type="range" id="p_bg" min="0" max="0.7" step="0.1" value="0.3"></label>
+  <label class="field"><span>Random seed</span><input type="number" id="p_seed" value="3" min="0" max="999"></label>
+  <button class="primary" id="runBtn" style="width:100%">Run scenario</button>
+  <div id="msg"></div>
+</div>
+<div id="bottom" class="glass">
+  <button id="menuBtn">Scenario & data</button>
+  <button id="play" class="primary">Pause</button>
+  <button id="restart">Restart</button>
+  <select id="speed" aria-label="Speed"><option value="2">2×</option><option value="6">6×</option><option value="15" selected>15×</option><option value="40">40×</option><option value="100">100×</option></select>
+  <div class="seg" id="schemeSeg"><button data-s="unicast">Addressed</button><button data-s="broadcast">Broadcast</button><button data-s="coded" class="on">Coded</button></div>
+  <div class="seg" id="viewSeg"><button data-v="3d" class="on">3D</button><button data-v="top">Top</button><button data-v="side">Side</button></div>
+  <button id="spin" class="on">Auto-rotate</button>
+  <button id="resBtn">20-seed results</button>
+  <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Playback position">
+</div>
+<div id="busy">Computing</div>
+<div id="results"><div class="box glass"><div class="row" style="justify-content:space-between"><b style="font:700 20px var(--disp);letter-spacing:.06em">20-SEED RESULTS (SYNTHETIC TRAFFIC)</b><button id="resClose">Close</button></div><div id="resBody" style="margin-top:10px"></div></div></div>
+
+<script>
+"use strict";
+/* ============================ constants & helpers ============================ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const SCH = ["unicast", "broadcast", "coded"];
+const COL = { unicast: "#f2b035", broadcast: "#8fb0e0", coded: "#2fd4b8" };
+const NAME = { unicast: "Addressed", broadcast: "Broadcast", coded: "Coded" };
+const SUB = { unicast: "one message per aircraft", broadcast: "everyone hears everything", coded: "XOR of clearances, deadline-aware" };
+const T_START = 700, VEX = 0.0016; // vertical exaggeration: NM of screen height per foot
+const fmt = (n, d = 0) => Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d }) : "–";
+function bisect(a, x) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] <= x) lo = m + 1; else hi = m; } return lo; }
+function rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+
+/* ============================ API ============================ */
+const qs = new URLSearchParams(location.search);
+let SERVER = qs.get("server") || (location.protocol.startsWith("http") ? location.origin : "http://localhost:8000");
+let APIKEY = qs.get("key") || "";
+async function api(path, opt = {}) {
+  let r;
+  try {
+    r = await fetch(SERVER.replace(/\/$/, "") + path, Object.assign({ headers: Object.assign({ "Content-Type": "application/json" }, APIKEY ? { "X-API-Key": APIKEY } : {}) }, opt));
+  } catch (e) { throw new Error(`Cannot reach the backend at ${SERVER}. Is it running?`); }
+  let j = null; try { j = await r.json(); } catch (e) { /* ignore */ }
+  if (!r.ok) throw new Error((j && j.error) || `HTTP ${r.status}`);
+  return j;
+}
+
+/* ============================ state ============================ */
+const S = { pb: null, t: T_START, playing: true, speed: 15, scheme: "coded", ptr: 0, fx: [], wall: 0, last: performance.now(), endT: 1, summary: null, datasets: [], dsId: "", busy: false };
+const cam = { yaw: 0.7, pitch: 0.62, dist: 150, tx: 0, ty: 0, tz: 0, spin: true, goal: null };
+let DIM = { w: 1, h: 1, dpr: 1 };
+const cv = $("#view"), g = cv.getContext("2d");
+
+function say(m, cls) { const e = $("#msg"); e.textContent = m; e.className = cls || ""; }
+
+/* ============================ playback model ============================ */
+function prep(pb) {
+  pb.endT = 60;
+  for (const s of SCH) {
+    const L = pb.schemes[s];
+    L.txEnd = L.txs.map(x => x[1]).sort((a, b) => a - b);
+    L.issueT = L.pairs.map(p => p[2]).sort((a, b) => a - b);
+    L.onTime = L.pairs.filter(p => p[4] !== null && p[4] <= p[3]).map(p => p[4]).sort((a, b) => a - b);
+    L.failT = L.pairs.filter(p => !(p[4] !== null && p[4] <= p[3])).map(p => p[3]).sort((a, b) => a - b);
+    L.endT = L.txs.length ? L.txs[L.txs.length - 1][1] : 0;
+    pb.endT = Math.max(pb.endT, L.endT);
+  }
+  pb.endT += 20;
+  const cx = pb.centre[0], cy = pb.centre[1];
+  // precompute world positions (NM, relative to tower) and visual altitude (ft) per aircraft per grid step
+  pb.ac = pb.aircraft.map(a => {
+    const n = a.x.length, X = new Float32Array(n), Y = new Float32Array(n), Z = new Float32Array(n), ok = new Uint8Array(n);
+    for (let i = 0; i < n; i++) {
+      if (a.x[i] === null || a.y[i] === null) continue;
+      ok[i] = 1; X[i] = a.x[i] - cx; Y[i] = a.y[i] - cy;
+      // synthetic traffic carries no altitude: show an illustrative descent profile (labelled in the HUD)
+      Z[i] = pb.kind === "synthetic" ? 1200 + 8500 * Math.min(1, Math.hypot(X[i], Y[i]) / 60) : (a.z[i] || 0);
+    }
+    return { id: a.id, first: a.first, X, Y, Z, ok, n };
+  });
+  pb.illustrativeAlt = pb.kind === "synthetic" || (pb.meta && !pb.meta.is_real && pb.kind === "recorded" && false);
+  pb.msgLabel = m => { const c = pb.clearances[m]; const id = pb.aircraft[c.ac].id; return id.slice(-3) + (c.v ? "." + c.v : ""); };
+  return pb;
+}
+function posAt(i, t) {
+  const pb = S.pb, a = pb.ac[i], f = t / pb.dt, k = Math.floor(f), u = f - k, j = k - a.first;
+  if (j < 0 || j >= a.n || !a.ok[j]) return null;
+  if (j + 1 >= a.n || !a.ok[j + 1]) return [a.X[j], a.Y[j], a.Z[j], 0, 0];
+  return [a.X[j] + (a.X[j + 1] - a.X[j]) * u, a.Y[j] + (a.Y[j + 1] - a.Y[j]) * u, a.Z[j] + (a.Z[j + 1] - a.Z[j]) * u, a.X[j + 1] - a.X[j], a.Y[j + 1] - a.Y[j]];
+}
+function openCounts(L, t) {
+  const n = S.pb.aircraft.length, cnt = new Array(n).fill(0), late = new Array(n).fill(0);
+  for (const p of L.pairs) {
+    if (p[2] > t) continue; if (p[4] !== null && p[4] <= t) continue; if (p[5] !== null && p[5] <= t) continue;
+    cnt[p[1]]++; if (p[3] < t) late[p[1]]++;
+  }
+  return { cnt, late };
+}
+function seek(t) { S.t = Math.max(0, Math.min(S.pb.endT, t)); S.fx = []; S.ptr = txIndex(S.pb.schemes[S.scheme].txs, S.t); }
+function txIndex(txs, t) { let lo = 0, hi = txs.length; while (lo < hi) { const m = (lo + hi) >> 1; if (txs[m][1] <= t) lo = m + 1; else hi = m; } return lo; }
+function spawn(tx) {
+  const w = S.wall, multi = tx[2].length > 1;
+  S.fx.push({ k: "ring", t0: w, c: COL[S.scheme], multi });
+  S.fx.push({ k: "label", t0: w, c: COL[S.scheme], text: tx[2].map(S.pb.msgLabel).join(" ⊕ ") });
+  for (const [m, r, ok] of tx[4]) S.fx.push({ k: "beam", t0: w + 150, c: COL[S.scheme], r, ok: !!ok, multi });
+}
+
+/* ============================ 3D camera ============================ */
+let CAM = null;
+function setupCamera() {
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+  const pos = [cam.tx + cam.dist * cp * sy, cam.ty + cam.dist * sp, cam.tz + cam.dist * cp * cy];
+  let f = [cam.tx - pos[0], cam.ty - pos[1], cam.tz - pos[2]]; const fl = Math.hypot(...f); f = f.map(v => v / fl);
+  let r = [f[2], 0, -f[0]]; const rl = Math.hypot(...r) || 1; r = r.map(v => v / rl);
+  const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+  CAM = { pos, f, r, u, focal: Math.min(DIM.h * 1.05, DIM.w * 0.9) };
+}
+// world: x east (NM), alt (screen units), z north (NM, negated for handedness) -> screen [x, y, depth]
+function P(x, alt, z) {
+  const c = CAM, vx = x - c.pos[0], vy = alt - c.pos[1], vz = z - c.pos[2];
+  const d = vx * c.f[0] + vy * c.f[1] + vz * c.f[2];
+  if (d < 0.5) return null;
+  const sx = vx * c.r[0] + vy * c.r[1] + vz * c.r[2], sy = vx * c.u[0] + vy * c.u[1] + vz * c.u[2];
+  return [DIM.w / 2 + (sx / d) * c.focal, DIM.h / 2 - (sy / d) * c.focal, d];
+}
+const W = (xNM, yNM, ft) => P(xNM, ft * VEX, -yNM);  // map (east, north, feet) -> screen
+function polyline(pts, close) {
+  let started = false; g.beginPath();
+  for (const p of pts) { if (!p) { started = false; continue; } if (!started) { g.moveTo(p[0], p[1]); started = true; } else g.lineTo(p[0], p[1]); }
+  if (close) g.closePath(); g.stroke();
+}
+function circle3(r, ft, n = 72) { const pts = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; pts.push(W(Math.cos(a) * r, Math.sin(a) * r, ft)); } return pts; }
+function setView(v) {
+  $$("#viewSeg button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  const R = S.pb ? Math.max(S.pb.bounds[2] - S.pb.bounds[0], S.pb.bounds[3] - S.pb.bounds[1]) : 120;
+  if (v === "3d") cam.goal = { yaw: 0.7, pitch: 0.62, dist: R * 1.25 };
+  if (v === "top") cam.goal = { yaw: cam.yaw, pitch: 1.5, dist: R * 1.15 };
+  if (v === "side") cam.goal = { yaw: 0.0, pitch: 0.12, dist: R * 1.25 };
+  cam.spin = v === "3d" ? cam.spin : false; $("#spin").classList.toggle("on", cam.spin);
+}
+
+/* ============================ rendering ============================ */
+function resize() {
+  DIM.dpr = Math.min(window.devicePixelRatio || 1, 2); DIM.w = innerWidth; DIM.h = innerHeight;
+  cv.width = Math.round(DIM.w * DIM.dpr); cv.height = Math.round(DIM.h * DIM.dpr); g.setTransform(DIM.dpr, 0, 0, DIM.dpr, 0, 0);
+}
+addEventListener("resize", resize);
+
+function draw() {
+  g.globalCompositeOperation = "source-over";
+  const grd = g.createRadialGradient(DIM.w / 2, DIM.h * 0.55, 20, DIM.w / 2, DIM.h * 0.55, Math.max(DIM.w, DIM.h) * 0.8);
+  grd.addColorStop(0, "#0c1c29"); grd.addColorStop(1, "#03070b");
+  g.fillStyle = grd; g.fillRect(0, 0, DIM.w, DIM.h);
+  if (!S.pb) return;
+  setupCamera();
+  const pb = S.pb, L = pb.schemes[S.scheme], col = COL[S.scheme];
+  const b = pb.bounds, cx = pb.centre[0], cy = pb.centre[1];
+  const x0 = b[0] - cx, x1 = b[2] - cx, y0 = b[1] - cy, y1 = b[3] - cy;
+  const maxR = Math.hypot(Math.max(Math.abs(x0), Math.abs(x1)), Math.max(Math.abs(y0), Math.abs(y1)));
+  // floor grid
+  g.lineWidth = 1; g.strokeStyle = "rgba(90,140,170,.10)";
+  const step = 20;
+  for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) polyline([W(x, y0, 0), W(x, y1, 0)]);
+  for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) polyline([W(x0, y, 0), W(x1, y, 0)]);
+  g.strokeStyle = "rgba(90,140,170,.35)"; polyline([W(x0, y0, 0), W(x1, y0, 0), W(x1, y1, 0), W(x0, y1, 0)], true);
+  g.font = "10px 'JetBrains Mono', monospace"; g.fillStyle = "rgba(140,170,190,.55)";
+  for (let r = 20; r <= maxR; r += 20) {
+    g.strokeStyle = "rgba(90,150,180,.22)"; polyline(circle3(r, 0));
+    const lp = W(r * 0.707, r * 0.707, 0); if (lp) g.fillText(r + " NM", lp[0] + 3, lp[1] - 3);
+  }
+  // routes
+  if (pb.routes && pb.routes.length) { g.setLineDash([4, 6]); g.strokeStyle = "rgba(120,170,200,.25)"; for (const r of pb.routes) polyline(r.map(p => W(p[0] - cx, p[1] - cy, 0))); g.setLineDash([]); }
+  // tower pillar
+  const tw0 = W(0, 0, 0), tw1 = W(0, 0, 3500);
+  if (tw0 && tw1) { g.strokeStyle = rgba(col, .8); g.lineWidth = 2; g.beginPath(); g.moveTo(tw0[0], tw0[1]); g.lineTo(tw1[0], tw1[1]); g.stroke(); g.fillStyle = col; g.beginPath(); g.arc(tw1[0], tw1[1], 4, 0, 7); g.fill(); g.fillStyle = "rgba(200,225,240,.8)"; g.fillText("TWR", tw1[0] + 8, tw1[1] + 3); }
+  // aircraft
+  const n = pb.aircraft.length, pos = new Array(n), k = Math.floor(S.t / pb.dt);
+  for (let i = 0; i < n; i++) pos[i] = posAt(i, S.t);
+  const { cnt, late } = openCounts(L, S.t);
+  // trails + conflict links
+  for (let i = 0; i < n; i++) {
+    if (!pos[i]) continue; const a = pb.ac[i]; const pts = [];
+    for (let q = Math.max(a.first, k - 16); q <= k; q++) { const j = q - a.first; if (j >= 0 && j < a.n && a.ok[j]) pts.push(W(a.X[j], a.Y[j], a.Z[j])); }
+    pts.push(W(pos[i][0], pos[i][1], pos[i][2]));
+    g.strokeStyle = "rgba(150,190,215,.35)"; g.lineWidth = 1.2; polyline(pts);
+  }
+  g.lineWidth = 1.6;
+  for (let i = 0; i < n; i++) if (pos[i]) for (let j = i + 1; j < n; j++) if (pos[j]) {
+    const dx = pos[i][0] - pos[j][0], dy = pos[i][1] - pos[j][1];
+    if (dx * dx + dy * dy < pb.r_alert * pb.r_alert && Math.abs(pos[i][2] - pos[j][2]) <= pb.vsep) {
+      g.strokeStyle = "rgba(255,107,107,.75)"; g.setLineDash([5, 4]); polyline([W(pos[i][0], pos[i][1], pos[i][2]), W(pos[j][0], pos[j][1], pos[j][2])]); g.setLineDash([]);
+    }
+  }
+  // depth-sorted aircraft glyphs
+  const items = [];
+  for (let i = 0; i < n; i++) { if (!pos[i]) continue; const s = W(pos[i][0], pos[i][1], pos[i][2]); if (s) items.push({ i, s }); }
+  items.sort((a, b) => b.s[2] - a.s[2]);
+  g.font = "10px 'JetBrains Mono', monospace";
+  for (const { i, s } of items) {
+    const p = pos[i], gr = W(p[0], p[1], 0), sc = Math.max(0.5, Math.min(2.4, CAM.focal / s[2] * 0.9));
+    if (gr) { g.strokeStyle = "rgba(120,170,200,.22)"; g.lineWidth = 1; g.beginPath(); g.moveTo(gr[0], gr[1]); g.lineTo(s[0], s[1]); g.stroke(); g.fillStyle = "rgba(120,170,200,.35)"; g.beginPath(); g.ellipse(gr[0], gr[1], 3 * sc, 1.4 * sc, 0, 0, 7); g.fill(); }
+    const ahead = W(p[0] + p[3], p[1] + p[4], p[2]); let ang = 0;
+    if (ahead && (Math.abs(p[3]) + Math.abs(p[4])) > 1e-6) ang = Math.atan2(ahead[1] - s[1], ahead[0] - s[0]);
+    g.save(); g.translate(s[0], s[1]); g.rotate(ang); g.fillStyle = "#dbeaf5"; g.beginPath(); g.moveTo(7 * sc, 0); g.lineTo(-5 * sc, 4 * sc); g.lineTo(-2.5 * sc, 0); g.lineTo(-5 * sc, -4 * sc); g.closePath(); g.fill(); g.restore();
+    if (cnt[i]) {
+      g.strokeStyle = late[i] ? "#ff6b6b" : "#f2b035"; g.lineWidth = late[i] ? 2.2 : 1.4; g.beginPath(); g.arc(s[0], s[1], (9 + Math.min(cnt[i], 8) * 1.6) * sc, 0, 7); g.stroke();
+      g.fillStyle = late[i] ? "#ff6b6b" : "#f2b035"; g.fillText("×" + cnt[i], s[0] + 12 * sc, s[1] + 14 * sc);
+    }
+    g.fillStyle = "rgba(190,210,225,.7)"; g.fillText(pb.aircraft[i].id.slice(-4), s[0] + 10 * sc, s[1] - 7 * sc);
+  }
+  // effects (additive glow)
+  g.globalCompositeOperation = "lighter";
+  const keep = [];
+  for (const e of S.fx) {
+    const age = S.wall - e.t0, life = e.k === "ring" ? 1100 : e.k === "label" ? 1500 : 850;
+    if (age > life) continue; keep.push(e); if (age < 0) continue; const u = age / life;
+    if (e.k === "ring") {
+      const rr = 4 + u * maxR * 0.9;
+      g.strokeStyle = rgba(e.c, (1 - u) * 0.9); g.lineWidth = e.multi ? 3.5 : 2.2; polyline(circle3(rr, 0, 96), true);
+      if (e.multi) polyline(circle3(rr * 0.72, 0, 96), true);
+      const top = W(0, 0, 3500 + u * 9000); if (tw0 && top) { g.strokeStyle = rgba(e.c, (1 - u) * 0.6); g.lineWidth = 4; g.beginPath(); g.moveTo(tw0[0], tw0[1]); g.lineTo(top[0], top[1]); g.stroke(); }
+    } else if (e.k === "beam") {
+      const p = pos[e.r]; if (!p) continue; const reach = Math.min(1, u * 2.4);
+      const A = [0, 0, 3500], B = [p[0], p[1], p[2]], M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2, Math.max(A[2], B[2]) + 6000];
+      const pts = []; for (let q = 0; q <= 24; q++) { const t = q / 24 * reach, a = (1 - t) * (1 - t), bb = 2 * (1 - t) * t, c = t * t; pts.push(W(a * A[0] + bb * M[0] + c * B[0], a * A[1] + bb * M[1] + c * B[1], a * A[2] + bb * M[2] + c * B[2])); }
+      g.strokeStyle = e.ok ? rgba(e.c, 1 - u * 0.7) : rgba("#ff6b6b", 0.8 * (1 - u)); g.lineWidth = e.multi ? 2.8 : 1.8; g.setLineDash(e.ok ? [] : [3, 5]); polyline(pts); g.setLineDash([]);
+      if (reach >= 1) { const s = W(p[0], p[1], p[2]); if (s) { g.strokeStyle = e.ok ? rgba(e.c, 1 - u) : rgba("#ff6b6b", 1 - u); g.lineWidth = 2; g.beginPath(); g.arc(s[0], s[1], 8 + u * 22, 0, 7); g.stroke(); } }
+    }
+  }
+  g.globalCompositeOperation = "source-over";
+  for (const e of keep) if (e.k === "label") { const age = S.wall - e.t0, u = age / 1500; const t = W(0, 0, 3500 + u * 4000); if (t) { g.font = "600 14px 'JetBrains Mono', monospace"; g.fillStyle = rgba(e.c, Math.min(1, 2 * (1 - u))); const w = g.measureText(e.text).width; g.fillText(e.text, t[0] - w / 2, t[1] - 12); } }
+  S.fx = keep;
+}
+
+/* ============================ UI updates ============================ */
+function buildCards() {
+  $("#right").innerHTML = SCH.map(s => `<div class="card glass" data-s="${s}" style="--c:${COL[s]}"><div class="nm"><b>${NAME[s]}</b><span>${SUB[s]}</span></div><div class="big"><span class="v">0</span><small>transmissions</small></div><div class="bar"><i class="ok"></i><i class="no"></i></div><div class="mono lg"></div><div class="mono fin"></div></div>`).join("");
+  $$(".card").forEach(c => c.addEventListener("click", () => chooseScheme(c.dataset.s)));
+}
+function chooseScheme(s) {
+  S.scheme = s; $$("#schemeSeg button").forEach(b => b.classList.toggle("on", b.dataset.s === s));
+  if (S.pb) { S.fx = []; S.ptr = txIndex(S.pb.schemes[s].txs, S.t); }
+}
+function updateCards() {
+  if (!S.pb) return;
+  const base = S.pb.schemes.broadcast;
+  for (const s of SCH) {
+    const L = S.pb.schemes[s], el = $(`.card[data-s="${s}"]`);
+    const tx = bisect(L.txEnd, S.t), iss = bisect(L.issueT, S.t), ok = bisect(L.onTime, S.t), fail = bisect(L.failT, S.t), open = Math.max(0, iss - ok - fail), den = Math.max(iss, 1);
+    $(".v", el).textContent = fmt(tx);
+    const bars = $$(".bar i", el); bars[0].style.width = 100 * ok / den + "%"; bars[1].style.width = 100 * fail / den + "%";
+    $(".lg", el).textContent = `on time ${ok}  missed ${fail}  waiting ${open}  of ${iss}`;
+    let f = `final: ${L.n_tx} tx · ${fmt(100 * L.miss, 1)}% missed`;
+    if (s === "coded" && base.n_tx) f += ` · ${fmt(100 * (base.n_tx - L.n_tx) / base.n_tx, 1)}% fewer than broadcast`;
+    $(".fin", el).textContent = f;
+    el.classList.toggle("sel", s === S.scheme);
+  }
+  $("#scrub").value = Math.round(S.t);
+  const pb = S.pb, kind = pb.kind === "recorded" ? (pb.meta.is_real ? "RECORDED PATHS (REAL)" : "SYNTHETIC FILE") : "SYNTHETIC TRAFFIC";
+  $("#hud").textContent = `${kind} · t = ${Math.round(S.t)} s · ${NAME[S.scheme].toUpperCase()} · amber ring = clearances still missing` + (pb.kind === "synthetic" ? " · altitude is illustrative" : "");
+}
+function updateBanner() {
+  const b = $("#banner"), pb = S.pb;
+  if (!pb) { return; }
+  const real = pb.meta && pb.meta.is_real, sv = S.summary && S.summary.coded_saving_vs_broadcast_pct;
+  b.className = "glass" + (real ? " real" : "");
+  b.textContent = (real ? `Real ADS-B aircraft paths (${pb.meta.label}); clearances are simulated. ` : pb.kind === "recorded" ? "Synthetic file replay; clearances are simulated. " : "Synthetic traffic, not real aircraft. ") +
+    `Coded saves only a few percent of transmissions versus plain broadcast (20-seed range 0.3% to 3.4%)` + (sv != null ? `; this run: ${sv}%` : "") + ". The big saving is against sending every clearance as a separate addressed message.";
+}
+function params() {
+  const rRel = +$("#p_rRel").value;
+  const scen = { H: +$("#p_H").value, r_rel: rRel, r_alert: Math.max(3, Math.round(rRel * 0.55)), margin: +$("#p_margin").value };
+  if (!S.dsId) scen.rate = +$("#p_rate").value;
+  return { params: scen, channel: { loss: +$("#p_loss").value, bg: +$("#p_bg").value }, seed: +$("#p_seed").value || 0 };
+}
+function paintOutputs() {
+  $$("#drawer .field").forEach(f => {
+    const i = $("input", f), o = $("output", f); if (!o) return;
+    const v = +i.value, id = i.id;
+    o.textContent = id === "p_loss" || id === "p_bg" ? Math.round(v * 100) + "%" : String(v);
+  });
+  $("#f_rate").style.display = S.dsId ? "none" : "";
+}
+$$("#drawer input[type=range]").forEach(i => i.addEventListener("input", paintOutputs));
+
+async function run() {
+  if (S.busy) return; S.busy = true; $("#busy").classList.add("on"); say("");
+  try {
+    const p = params();
+    const body = { params: p.params, channel: p.channel, seed: p.seed }; if (S.dsId) body.dataset_id = +S.dsId;
+    const j = await api("/api/simulate", { method: "POST", body: JSON.stringify(body) });
+    S.pb = prep(j.playback); S.summary = j.summary;
+    S.t = Math.min(T_START, S.pb.endT * 0.5); S.fx = []; S.ptr = txIndex(S.pb.schemes[S.scheme].txs, S.t);
+    $("#scrub").max = Math.round(S.pb.endT);
+    const R = Math.max(S.pb.bounds[2] - S.pb.bounds[0], S.pb.bounds[3] - S.pb.bounds[1]); cam.dist = R * 1.25; cam.goal = null;
+    updateBanner(); say(`${j.summary.n_aircraft} aircraft · ${j.summary.n_clearances} clearances · ${j.summary.compute_s}s`, "ok");
+    setConn(true);
+  } catch (e) { say(e.message, "bad"); $("#banner").textContent = e.message; setConn(false); }
+  S.busy = false; $("#busy").classList.remove("on");
+}
+function setConn(ok) { /* connection state shown through banner and drawer message */ }
+
+async function loadDatasets() {
+  try {
+    S.datasets = await api("/api/datasets");
+    const sel = $("#dataset"), cur = S.dsId;
+    sel.innerHTML = `<option value="">Synthetic traffic (built-in generator)</option>` + S.datasets.map(d => `<option value="${d.id}" ${d.status === "recording" ? "disabled" : ""}>#${d.id} ${d.is_real ? "[REAL]" : "[SYNTHETIC]"} ${d.name} · ${d.n_rows} rows · ${d.status}</option>`).join("");
+    sel.value = S.datasets.some(d => String(d.id) === String(cur)) ? cur : ""; S.dsId = sel.value; paintOutputs();
+  } catch (e) { say(e.message, "bad"); }
+}
+async function connect() {
+  SERVER = $("#server").value.trim() || SERVER; say("Connecting…");
+  try { await api("/api/health"); say("Connected.", "ok"); await loadDatasets(); await run(); }
+  catch (e) { say(e.message, "bad"); $("#banner").textContent = e.message; }
+}
+async function record() {
+  const bb = ["b0", "b1", "b2", "b3"].map(i => parseFloat($("#" + i).value)), mins = parseFloat($("#mins").value);
+  if (bb.some(Number.isNaN) || Number.isNaN(mins)) return say("Enter numbers for the box and minutes.", "bad");
+  try {
+    const r = await api("/api/datasets/opensky", { method: "POST", body: JSON.stringify({ bbox: bb, minutes: mins, every: 10, name: "OpenSky " + new Date().toISOString().slice(0, 16) }) });
+    say(`Recording started (job ${r.job_id}). Keep the backend running.`, "ok"); await loadDatasets();
+    const t = setInterval(async () => {
+      try { const j = await api("/api/jobs/" + r.job_id); say(`job ${j.id}: ${j.state} · polls ${j.polls} · failures ${j.failures} · rows ${j.rows}${j.message ? "\n" + j.message : ""}`, j.state === "failed" ? "bad" : j.state === "done" ? "ok" : "");
+        if (j.state !== "running") { clearInterval(t); await loadDatasets(); } } catch (e) { clearInterval(t); say(e.message, "bad"); }
+    }, 3000);
+  } catch (e) { say(e.message, "bad"); }
+}
+
+/* ============================ wiring ============================ */
+$("#server").value = SERVER;
+$("#connect").addEventListener("click", connect);
+$("#runBtn").addEventListener("click", run);
+$("#dataset").addEventListener("change", e => { S.dsId = e.target.value; paintOutputs(); });
+$("#demoBtn").addEventListener("click", async () => { try { await api("/api/datasets/demo", { method: "POST" }); await loadDatasets(); say("Synthetic demo file added (labelled SYNTHETIC).", "ok"); } catch (e) { say(e.message, "bad"); } });
+$("#refreshBtn").addEventListener("click", loadDatasets);
+$("#recBtn").addEventListener("click", record);
+$("#menuBtn").addEventListener("click", () => $("#drawer").classList.toggle("open"));
+$("#play").addEventListener("click", () => { S.playing = !S.playing; $("#play").textContent = S.playing ? "Pause" : "Play"; });
+$("#restart").addEventListener("click", () => { if (S.pb) seek(T_START); S.playing = true; $("#play").textContent = "Pause"; });
+$("#speed").addEventListener("change", e => S.speed = +e.target.value);
+$("#scrub").addEventListener("input", e => S.pb && seek(+e.target.value));
+$$("#schemeSeg button").forEach(b => b.addEventListener("click", () => chooseScheme(b.dataset.s)));
+$$("#viewSeg button").forEach(b => b.addEventListener("click", () => setView(b.dataset.v)));
+$("#spin").addEventListener("click", () => { cam.spin = !cam.spin; $("#spin").classList.toggle("on", cam.spin); });
+const PRE = { light: { rate: .5, loss: .05 }, rush: { rate: 3, loss: .05 }, lossy: { rate: 1.5, loss: .3 }, heavy: { rate: 3, loss: .3 } };
+$$("[data-preset]").forEach(b => b.addEventListener("click", () => { const q = PRE[b.dataset.preset]; $("#p_rate").value = q.rate; $("#p_loss").value = q.loss; paintOutputs(); run(); }));
+$("#resBtn").addEventListener("click", async () => {
+  $("#results").classList.add("open");
+  try {
+    const d = await api("/api/results"), nice = s => { const m = s.match(/rate([\d.]+)(?:_loss([\d.]+))?/); return m ? m[1] + "/min" + (m[2] ? `, ${Math.round(m[2] * 100)}% loss` : "") : s; };
+    $("#resBody").innerHTML = `<table><tr><th>Setting</th><th>Coded saving vs broadcast</th><th>Fewer misses (pts)</th></tr>${d.paired.map(r => `<tr><td>${nice(r.setting)}</td><td>${r.saving_pct.toFixed(2)}% ± ${r.saving_ci.toFixed(2)}</td><td>${r.miss_diff_pts.toFixed(3)} ± ${r.miss_diff_ci.toFixed(3)}</td></tr>`).join("")}</table>
+      <p class="mono" style="margin-top:10px">Exact optimum on ${d.checkpoint.snapshots} small snapshots: broadcast ${d.checkpoint.broadcast.toFixed(2)}, greedy XOR ${d.checkpoint.greedy.toFixed(2)}, exact ${d.checkpoint.exact.toFixed(2)} transmissions. Paired by seed, 95% interval, synthetic traffic only. Positive "fewer misses" means coding missed fewer deadlines.</p>`;
+  } catch (e) { $("#resBody").textContent = e.message; }
+});
+$("#resClose").addEventListener("click", () => $("#results").classList.remove("open"));
+
+// orbit / zoom / pinch
+const ptrs = new Map(); let pinch0 = 0, dist0 = 0;
+cv.addEventListener("pointerdown", e => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); cam.goal = null; if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); dist0 = cam.dist; } });
+cv.addEventListener("pointermove", e => {
+  if (!ptrs.has(e.pointerId)) return; const o = ptrs.get(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (ptrs.size === 1) { cam.yaw -= (e.clientX - o[0]) * 0.006; cam.pitch = Math.max(0.05, Math.min(1.5, cam.pitch + (e.clientY - o[1]) * 0.006)); }
+  else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch0 > 0) cam.dist = Math.max(25, Math.min(600, dist0 * pinch0 / d)); }
+});
+const up = e => { ptrs.delete(e.pointerId); }; cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+cv.addEventListener("wheel", e => { e.preventDefault(); cam.dist = Math.max(25, Math.min(600, cam.dist * Math.exp(e.deltaY * 0.001))); }, { passive: false });
+
+/* ============================ main loop ============================ */
+function frame(now) {
+  const dt = Math.min(0.1, (now - S.last) / 1000); S.last = now; S.wall += dt * 1000;
+  if (cam.spin && ptrs.size === 0) cam.yaw += dt * 0.08;
+  if (cam.goal) { const k = 1 - Math.exp(-dt * 4); cam.yaw += (cam.goal.yaw - cam.yaw) * k; cam.pitch += (cam.goal.pitch - cam.pitch) * k; cam.dist += (cam.goal.dist - cam.dist) * k; }
+  if (S.pb) {
+    if (S.playing) { S.t += dt * S.speed; if (S.t >= S.pb.endT) seek(T_START); }
+    const txs = S.pb.schemes[S.scheme].txs;
+    while (S.ptr < txs.length && txs[S.ptr][1] <= S.t) { if (S.t - txs[S.ptr][1] < 12) spawn(txs[S.ptr]); S.ptr++; }
+    if (now - (S.cardTick || 0) > 100) { S.cardTick = now; updateCards(); }
+  }
+  draw(); requestAnimationFrame(frame);
+}
+buildCards(); resize(); paintOutputs(); setView("3d"); $("#drawer").classList.remove("open");
+requestAnimationFrame(frame);
+connect();
+</script>
+</body>
+</html>

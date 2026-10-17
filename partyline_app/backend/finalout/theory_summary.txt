@@ -1,0 +1,41 @@
+Measured waste of receptions by aircraft with a believed need, 60% of reports lost, critical weight 10, airspaces 4 5 8 9 11 12 13 14
+  j = clearances in the packet that the station believed the aircraft lacked; waste = the reception brought no new degree of freedom
+
+=== stgc2   [94 windows]
+kind,j    receptions  wasted %            95% CI
+c1             59050      33.7     [ 32.8, 34.7]
+c2             13925      19.3     [ 18.1, 20.5]
+c3              2141      17.9     [ 15.6, 20.1]
+c4               696      13.8     [ 11.2, 16.4]
+c5               401       9.5     [  5.9, 13.5]
+u1             61310       6.5     [  5.8,  7.2]
+p_hat (coded, j=1) = 33.7%
+j      independent p^j  fully correlated p    measured
+2                11.4%               33.7%       19.3%
+3                 3.8%               33.7%       17.9%
+
+=== idnc_cls   [94 windows]
+kind,j    receptions  wasted %            95% CI
+c1             51059      31.2     [ 30.3, 32.1]
+c2              8969       7.4     [  6.6,  8.4]
+c3               173       9.8     [  6.1, 14.8]
+c4                 9       0.0     [  0.0,  0.0]
+u1             68553      16.6     [ 15.5, 18.0]
+p_hat (coded, j=1) = 31.2%
+j      independent p^j  fully correlated p    measured
+2                 9.7%               31.2%        7.4%
+3                 3.0%               31.2%        9.8%
+
+=== stgc   [94 windows]
+kind,j    receptions  wasted %            95% CI
+c1             48257      41.8     [ 40.9, 42.7]
+c2              6564      33.5     [ 31.6, 35.2]
+c3              1223      20.2     [ 16.5, 23.9]
+c4               349      17.5     [ 11.8, 25.5]
+c5               152      12.5     [  6.2, 18.8]
+u1             72441      11.1     [ 10.0, 12.3]
+p_hat (coded, j=1) = 41.8%
+j      independent p^j  fully correlated p    measured
+2                17.5%               41.8%       33.5%
+3                 7.3%               41.8%       20.2%
+

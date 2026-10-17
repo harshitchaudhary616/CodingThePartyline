@@ -1,0 +1,19 @@
+Layer-by-layer value of STGC2, critical weight 10, loss 0.3, airspaces 4 5 8 9 11 12 13 14
+  uplinks: % saved by the first scheme; misses: points (negative = first scheme better); * first better, - first worse (95% bootstrap)
+
+=== ideal feedback   [8 airspaces]
+step                                                                                        uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+tiered repair holding added to IDNC-cls                                               +1.5 [  +0.3,  +3.8]*        +0.0 [  -0.4,  +0.6]         +0.1 [  -0.0,  +0.2]         +0.1 [  -0.2,  +0.5] 
+stored random-linear repairs + clique seeds added (STGC2 vs tiered IDNC-cls)          +0.5 [  -1.7,  +3.6]         +4.7 [  +3.0,  +6.2]-        +0.2 [  -0.1,  +1.4]         -3.1 [  -4.5,  -1.5]*
+all layers: STGC2 vs IDNC-cls                                                         +2.1 [  -0.9,  +6.9]         +4.7 [  +3.2,  +6.2]-        +0.3 [  -0.0,  +1.4]         -3.0 [  -4.4,  -1.4]*
+class weights inside STGC (STGC vs class-blind STGC)                                                    n/a                          n/a                          n/a                          n/a
+holding inside STGC (STGC vs repairs sent at once)                                                      n/a                          n/a                          n/a                          n/a
+
+=== 60% of reports lost   [8 airspaces]
+step                                                                                        uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+tiered repair holding added to IDNC-cls                                               +4.4 [  +0.6,  +9.5]*        -0.6 [  -1.0,  +0.1]         -0.0 [  -0.2,  +0.1]         -0.3 [  -1.0,  +0.3] 
+stored random-linear repairs + clique seeds added (STGC2 vs tiered IDNC-cls)          +2.9 [  +0.8,  +6.3]*        +4.1 [  +2.9,  +5.3]-        +0.3 [  +0.1,  +0.5]-        -8.0 [ -10.9,  -4.8]*
+all layers: STGC2 vs IDNC-cls                                                         +7.1 [  +1.9, +14.9]*        +3.5 [  +2.4,  +4.6]-        +0.2 [  +0.1,  +0.5]-        -8.3 [ -11.3,  -4.9]*
+class weights inside STGC (STGC vs class-blind STGC)                                                    n/a                          n/a                          n/a                          n/a
+holding inside STGC (STGC vs repairs sent at once)                                                      n/a                          n/a                          n/a                          n/a
+

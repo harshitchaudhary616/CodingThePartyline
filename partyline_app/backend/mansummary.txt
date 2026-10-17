@@ -1,0 +1,30 @@
+MANOEUVRE-DERIVED CLEARANCES (clearance times from the observed turns, climbs/descents and speed changes of the real tracks)
+  uplinks: % saved (positive = STGC2 better); misses: points (negative = STGC2 better); [95% two-level block bootstrap]; * STGC2 better, - worse
+
+=== default thresholds (lead 30 s, turn 20 deg, speed 25 kt, vertical 500 fpm), ideal feedback   [8 airspaces, 94 windows]
+    derived clearances: 0.37 per aircraft per minute (random default 0.25); manoeuvre clearances by type: {'turn': 1086, 'vertical': 4531, 'speed': 2743}
+    comparison                                uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+    STGC2 vs class-blind IDNC           +8.5 [  +6.7, +10.8]*       -10.5 [ -14.4,  -5.9]*        -1.2 [  -1.7,  -0.8]*        -6.4 [ -10.1,  -2.5]*
+    STGC2 vs class-aware IDNC           -0.8 [  -3.2,  +2.8]         +2.8 [  +1.3,  +4.3]-        +0.0 [  -0.0,  +0.1]         -4.3 [  -6.3,  -2.0]*
+    absolute uplinks per window: unicast 271.6, idnc_best 139.2, idnc_cls 124.3, stgc2 126.0
+
+=== default thresholds, 60% of reports lost   [8 airspaces, 94 windows]
+    derived clearances: 0.37 per aircraft per minute (random default 0.25); manoeuvre clearances by type: {'turn': 1086, 'vertical': 4531, 'speed': 2743}
+    comparison                                uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+    STGC2 vs class-blind IDNC          +17.6 [ +14.8, +21.3]*       -15.0 [ -19.3,  -9.8]*        -3.2 [  -4.4,  -1.6]*       -16.0 [ -21.4, -10.0]*
+    STGC2 vs class-aware IDNC           +6.9 [  +2.9, +13.3]*        +1.1 [  +0.2,  +1.9]-        +0.0 [  -0.0,  +0.1]        -10.0 [ -14.4,  -5.6]*
+    absolute uplinks per window: unicast 306.1, idnc_best 172.7, idnc_cls 151.4, stgc2 143.0
+
+=== lead 60 s, 60% of reports lost   [8 airspaces, 94 windows]
+    derived clearances: 0.33 per aircraft per minute (random default 0.25); manoeuvre clearances by type: {'turn': 941, 'vertical': 4439, 'speed': 2329}
+    comparison                                uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+    STGC2 vs class-aware IDNC           +6.0 [  +2.7, +11.9]*        +1.1 [  +0.1,  +1.7]-        +0.0 [  -0.1,  +0.1]         -9.6 [ -13.4,  -5.4]*
+    absolute uplinks per window: unicast nan, idnc_best nan, idnc_cls 136.0, stgc2 128.6
+
+=== stricter detection (turn 40 deg, speed 50 kt, vertical 1000 fpm), 60% of reports lost   [8 airspaces, 94 windows]
+    derived clearances: 0.31 per aircraft per minute (random default 0.25); manoeuvre clearances by type: {'turn': 721, 'vertical': 3596, 'speed': 1390}
+    comparison                                uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts
+    STGC2 vs class-aware IDNC           +7.1 [  +2.7, +12.9]*        +1.0 [  +0.1,  +1.5]-        +0.1 [  -0.0,  +0.1]        -10.0 [ -13.3,  -6.1]*
+    absolute uplinks per window: unicast nan, idnc_best nan, idnc_cls 124.8, stgc2 116.9
+
+Caveat: manoeuvres are a proxy for controller instructions (pilot/FMS-initiated changes are included, instructions that change nothing are missed).

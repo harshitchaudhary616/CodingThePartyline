@@ -1,0 +1,27 @@
+LEAVE-ONE-AIRSPACE-OUT: STGC2 versus class-aware IDNC (uplinks: % saved, positive = STGC2 better; misses: points, negative = STGC2 better)
+configuration                 metric                     all         LOO range  most influential  STGC2 better in
+main study, 60% lost          uplinks saved %            7.1   [   4.1,   8.3]           drop 11           8 of 8
+main study, 60% lost          critical miss pts          0.2   [   0.2,   0.3]           drop 14           0 of 8
+main study, 60% lost          awareness miss pts        -8.3   [  -9.5,  -7.5]           drop 11           7 of 8
+
+main study, ideal feedback    (fewer than 3 airspaces with files)
+conservative channel          uplinks saved %            3.2   [   2.6,   3.7]            drop 4           7 of 8
+conservative channel          critical miss pts          6.0   [   5.0,   6.7]            drop 5           0 of 8
+conservative channel          awareness miss pts        -8.7   [  -9.9,  -8.3]           drop 11           7 of 8
+
+severe channel                uplinks saved %            1.9   [   1.3,   2.3]            drop 5           6 of 8
+severe channel                critical miss pts          6.6   [   5.7,   7.0]            drop 4           0 of 8
+severe channel                awareness miss pts        -3.3   [  -3.8,  -3.2]           drop 11           7 of 8
+
+sector 240 NM                 uplinks saved %           14.7   [  12.3,  15.7]           drop 11           8 of 8
+sector 240 NM                 critical miss pts          4.5   [   4.0,   5.1]           drop 14           0 of 8
+sector 240 NM                 awareness miss pts       -11.5   [ -13.0, -10.8]           drop 11           8 of 8
+
+conflict-driven, 60% lost     uplinks saved %            3.9   [   2.3,   4.8]            drop 9           5 of 8
+conflict-driven, 60% lost     critical miss pts          0.0   [   0.0,   0.0]            drop 8           1 of 8
+conflict-driven, 60% lost     awareness miss pts        -6.8   [  -7.6,  -6.1]           drop 11           8 of 8
+
+manoeuvre-derived, 60% lost   uplinks saved %            6.9   [   4.7,   8.1]           drop 11           8 of 8
+manoeuvre-derived, 60% lost   critical miss pts          0.0   [   0.0,   0.0]           drop 14           1 of 8
+manoeuvre-derived, 60% lost   awareness miss pts       -10.0   [ -11.3,  -8.7]           drop 11           8 of 8
+

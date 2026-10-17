@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Party Line Results</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#2b3340;--ink:#e6edf3;--mut:#8b98a8;--ok:#3fb950;--bad:#f85149;--warn:#d29922;--acc:#58a6ff;--c0:#8b98a8;--c1:#d29922;--c2:#bc8cff;--c3:#3fb950}
+@media(prefers-color-scheme:light){:root{--bg:#f6f8fa;--panel:#fff;--line:#d0d7de;--ink:#1f2328;--mut:#59636e;--ok:#1a7f37;--bad:#cf222e;--warn:#9a6700;--acc:#0969da;--c0:#59636e;--c1:#9a6700;--c2:#8250df;--c3:#1a7f37}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+h1{font-size:16px;margin:0}
+main{max-width:1180px;margin:0 auto;padding:14px 16px 60px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
+.banner{border:1px solid var(--line);border-left:4px solid var(--warn);background:var(--panel);padding:9px 12px;border-radius:6px;margin-bottom:14px}
+.banner.real{border-left-color:var(--ok)}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:22px;text-align:center;color:var(--mut)}
+.drop.over{border-color:var(--acc)}
+button,label.btn{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer;font:inherit}
+button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.mut{color:var(--mut)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--panel)}
+.card h3{margin:0 0 6px;font-size:13px;color:var(--mut);font-weight:600}
+.big{font-size:26px;font-weight:700}
+.sig{color:var(--ok)}.ns{color:var(--mut)}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+svg text{fill:var(--ink);font:11px system-ui,sans-serif}
+svg .m{fill:var(--mut)}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+ul{margin:6px 0 0 18px;padding:0}
+li{margin:3px 0}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header><h1>Party Line · Results</h1><span class="mut" id="stat">no results loaded</span></header>
+<main>
+<div class="panel" id="loader">
+  <div class="drop" id="drop">
+    Drop your result files here, or
+    <label class="btn" for="pick">choose files</label>
+    <input id="pick" type="file" accept=".json" multiple hidden>
+    <div class="mut" style="margin-top:8px">Use <b>expw_dataset&lt;id&gt;.json</b> (windowed evaluation) and <b>sens_dataset&lt;id&gt;.json</b> (sensitivity) from <code>partyline_app/backend/data/</code>. You can pick both at once. Files are read in your browser only.</div>
+  </div>
+</div>
+<div id="out" class="hidden">
+  <div id="banner"></div>
+  <div class="panel"><h2 style="margin:0 0 10px;font-size:15px">Headline: coded delivery against the alternatives</h2><div class="cards" id="cards"></div></div>
+  <div class="panel"><h2 style="margin:0 0 4px;font-size:15px">Missed schedulable deadlines by scheme</h2>
+    <div class="mut" style="margin-bottom:8px">Lower is better. Whiskers are 95% intervals across independent time windows. "Schedulable" needs have at least 5 s of slack.</div>
+    <div class="row2" id="bars"></div></div>
+  <div class="panel" id="sensPanel"><h2 style="margin:0 0 4px;font-size:15px">Does the result survive changes to modelling choices?</h2>
+    <div class="mut" style="margin-bottom:8px">One factor changed at a time. Each dot is the mean improvement of coded; the line is the 95% interval. Green = interval excludes zero (coded better).</div>
+    <div class="tabs"><button id="tb" class="on">Coded vs broadcast</button><button id="ti">Coded vs published-style IDNC</button></div>
+    <div class="row2" id="forest"></div></div>
+  <div class="panel"><h2 style="margin:0 0 6px;font-size:15px">Plain-English reading</h2><div id="reading"></div></div>
+  <div class="panel"><h2 style="margin:0 0 6px;font-size:15px">What this does not show</h2>
+    <ul>
+      <li>Aircraft paths are recorded ADS-B; <b>clearances and the radio channel are simulated</b>.</li>
+      <li>Real traffic is already separated by controllers, so conflicts are near-passes within the chosen thresholds.</li>
+      <li>Results come from the recorded airspace and time period only. Replication on other airspaces is needed.</li>
+      <li>Intervals assume the time windows are independent; neighbouring windows can share traffic patterns.</li>
+      <li>Several comparisons were made on the same data, so isolated significant results should be read with care.</li>
+    </ul></div>
+</div>
+</main>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let EXP = null, SENS = null, EXPNAME = '', view = 'b';
+const NAMES = {unicast: 'Addressed', broadcast: 'Broadcast', idnc: 'IDNC (published-style)', coded: 'Coded (ours)'};
+const COLS = {unicast: 'var(--c0)', broadcast: 'var(--c1)', idnc: 'var(--c2)', coded: 'var(--c3)'};
+const sig = v => v[0] - v[1] > 0;
+const fmt = (v, d = 1) => v[0].toFixed(d) + ' ± ' + v[1].toFixed(d);
+
+function ingest(obj, name) {
+  if (obj && obj.results && obj.base) { SENS = obj; }
+  else if (obj && Object.values(obj).some(v => v && v.schemes && v.paired)) { EXP = obj; EXPNAME = name; }
+  else throw new Error(name + ' is not a results file from experiments_windows.py or experiments_sensitivity.py');
+}
+async function load(files) {
+  const errs = [];
+  for (const f of files) {
+    try { ingest(JSON.parse(await f.text()), f.name); } catch (e) { errs.push(e.message); }
+  }
+  $('stat').textContent = (EXP ? 'evaluation ✓ ' : '') + (SENS ? 'sensitivity ✓' : '') || 'no results loaded';
+  if (errs.length) alert(errs.join('\n'));
+  render();
+}
+$('pick').onchange = e => load([...e.target.files]);
+const dz = $('drop');
+['dragover', 'dragenter'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove('over'); }));
+dz.addEventListener('drop', e => load([...e.dataTransfer.files]));
+$('tb').onclick = () => { view = 'b'; $('tb').classList.add('on'); $('ti').classList.remove('on'); forest(); };
+$('ti').onclick = () => { view = 'i'; $('ti').classList.add('on'); $('tb').classList.remove('on'); forest(); };
+
+function render() {
+  if (!EXP && !SENS) return;
+  $('out').classList.remove('hidden');
+  // banner
+  let meta = null;
+  if (EXP) meta = Object.values(EXP)[0].dataset;
+  if (meta) {
+    const win = meta.windows ? `${meta.windows} independent ${meta.window_min}-minute windows` : `${Object.values(EXP)[0].n_seeds} runs`;
+    $('banner').innerHTML = meta.is_real
+      ? `<div class="banner real"><b>Real aircraft paths:</b> ${esc(meta.name)} (${meta.rows.toLocaleString()} recorded ADS-B positions, ${win}). Clearances and the channel are simulated.</div>`
+      : `<div class="banner"><b>Synthetic traffic:</b> ${esc(meta.name)}. This is not evidence about real airspace.</div>`;
+  } else {
+    $('banner').innerHTML = '<div class="banner">Dataset provenance not available in the loaded file. Load the evaluation file (expw_dataset…json) to show it.</div>';
+  }
+  $('cards').innerHTML = ''; $('bars').innerHTML = '';
+  if (EXP) { cards(); bars(); } else { $('cards').innerHTML = '<div class="mut">Load the evaluation file to see the headline numbers.</div>'; }
+  $('sensPanel').classList.toggle('hidden', !SENS);
+  if (SENS) forest();
+  reading();
+}
+
+function cards() {
+  const keys = Object.keys(EXP);
+  keys.forEach(k => {
+    const o = EXP[k], p = o.paired, loss = o.channel.loss;
+    const cb = p.coded_vs_broadcast, ci = p.coded_vs_idnc;
+    const div = document.createElement('div'); div.className = 'card';
+    div.innerHTML = `<h3>Packet loss ${Math.round(loss * 100)}% · ${o.n_seeds} windows</h3>
+      <div class="mut">Coded vs broadcast</div>
+      <div class="big ${sig(cb.tx_saving_pct) ? 'sig' : 'ns'}">${cb.tx_saving_pct[0].toFixed(1)}%</div>
+      <div class="mut">fewer transmissions (${fmt(cb.tx_saving_pct)}) ${sig(cb.tx_saving_pct) ? '✓ significant' : 'not significant'}</div>
+      <div class="big ${sig(cb.miss_sched_improvement_pts) ? 'sig' : 'ns'}" style="margin-top:8px">${cb.miss_sched_improvement_pts[0].toFixed(1)} pts</div>
+      <div class="mut">fewer missed schedulable deadlines (${fmt(cb.miss_sched_improvement_pts)}) ${sig(cb.miss_sched_improvement_pts) ? '✓ significant' : 'not significant'}</div>
+      <div class="mut" style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">Coded vs IDNC: ${fmt(ci.tx_saving_pct)}% tx, ${fmt(ci.miss_sched_improvement_pts)} pts misses
+      ${(sig(ci.tx_saving_pct) || sig(ci.miss_sched_improvement_pts)) ? '(some evidence of an edge)' : '(no significant difference)'}</div>`;
+    $('cards').appendChild(div);
+  });
+}
+
+function bars() {
+  Object.keys(EXP).forEach(k => {
+    const o = EXP[k], S = ['unicast', 'broadcast', 'idnc', 'coded'];
+    const vals = S.map(s => o.schemes[s].miss_sched.map(x => 100 * x));
+    const max = Math.max(...vals.map(v => v[0] + v[1]), 1) * 1.1;
+    const W = 440, H = 220, L = 44, B = 40, T = 14, bw = 56, gap = (W - L - 10 - bw * 4) / 4;
+    let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="missed schedulable deadlines by scheme at ${o.channel.loss} loss">`;
+    for (let i = 0; i <= 4; i++) {
+      const v = max * i / 4, y = H - B - (H - B - T) * i / 4;
+      s += `<line x1="${L}" x2="${W - 6}" y1="${y}" y2="${y}" stroke="var(--line)"/><text class="m" x="${L - 6}" y="${y + 4}" text-anchor="end">${v.toFixed(0)}%</text>`;
+    }
+    S.forEach((n, i) => {
+      const [m, c] = vals[i], x = L + gap / 2 + i * (bw + gap), y = H - B - (H - B - T) * m / max, y2 = H - B - (H - B - T) * Math.max(m - c, 0) / max, y3 = H - B - (H - B - T) * (m + c) / max;
+      s += `<rect x="${x}" y="${y}" width="${bw}" height="${H - B - y}" rx="3" fill="${COLS[n]}"/>`;
+      s += `<line x1="${x + bw / 2}" x2="${x + bw / 2}" y1="${y2}" y2="${y3}" stroke="var(--ink)"/><line x1="${x + bw / 2 - 5}" x2="${x + bw / 2 + 5}" y1="${y3}" y2="${y3}" stroke="var(--ink)"/><line x1="${x + bw / 2 - 5}" x2="${x + bw / 2 + 5}" y1="${y2}" y2="${y2}" stroke="var(--ink)"/>`;
+      s += `<text x="${x + bw / 2}" y="${H - B + 14}" text-anchor="middle">${n === 'idnc' ? 'IDNC' : NAMES[n].split(' ')[0]}</text><text class="m" x="${x + bw / 2}" y="${H - B + 27}" text-anchor="middle">${m.toFixed(1)}%</text>`;
+    });
+    s += '</svg>';
+    const d = document.createElement('div');
+    d.innerHTML = `<div class="mut" style="margin-bottom:2px">Packet loss ${Math.round(o.channel.loss * 100)}%</div>` + s;
+    $('bars').appendChild(d);
+  });
+}
+
+function forestSvg(rows, title) {
+  const R = 20, L = 118, W = 460, T = 26, H = T + rows.length * R + 24;
+  const ext = Math.max(1, ...rows.map(r => Math.abs(r.v[0]) + r.v[1])) * 1.1;
+  const X = v => L + (W - L - 10) * (v + ext) / (2 * ext);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(title)}"><text x="${L}" y="12" style="font-weight:600">${esc(title)}</text>`;
+  s += `<line x1="${X(0)}" x2="${X(0)}" y1="${T - 6}" y2="${H - 20}" stroke="var(--mut)" stroke-dasharray="3 3"/>`;
+  let prev = '';
+  rows.forEach((r, i) => {
+    const y = T + i * R + R / 2, c = sig(r.v) ? 'var(--ok)' : 'var(--mut)';
+    if (r.factor !== prev) { s += `<line x1="0" x2="${W}" y1="${y - R / 2}" y2="${y - R / 2}" stroke="var(--line)"/>`; prev = r.factor; }
+    s += `<text class="m" x="${L - 6}" y="${y + 4}" text-anchor="end">${esc(r.label)}</text>`;
+    s += `<line x1="${X(r.v[0] - r.v[1])}" x2="${X(r.v[0] + r.v[1])}" y1="${y}" y2="${y}" stroke="${c}" stroke-width="2"/><circle cx="${X(r.v[0])}" cy="${y}" r="3.5" fill="${c}"/>`;
+  });
+  [-ext, 0, ext].forEach(v => s += `<text class="m" x="${X(v)}" y="${H - 6}" text-anchor="middle">${v.toFixed(0)}</text>`);
+  return s + '</svg>';
+}
+function forest() {
+  if (!SENS) return;
+  const R = SENS.results, tx = view === 'b' ? 'tx_vs_broadcast' : 'tx_vs_idnc', ms = view === 'b' ? 'miss_vs_broadcast' : 'miss_vs_idnc';
+  const names = {loss: 'packet loss', bg: 'background load', slack: 'slack threshold s', max_aircraft: 'aircraft cap', r_alert: 'conflict radius NM', margin: 'margin s'};
+  const rows = k => Object.keys(R).map(key => { const [f, v] = key.split('='); return {factor: f, label: `${names[f] || f} ${v}`, v: R[key][k]}; });
+  $('forest').innerHTML = `<div>${forestSvg(rows(tx), 'Fewer transmissions (%)')}</div><div>${forestSvg(rows(ms), 'Fewer missed schedulable deadlines (points)')}</div>`;
+}
+
+function reading() {
+  const L = [];
+  if (SENS) {
+    const R = Object.values(SENS.results), n = R.length;
+    const c = k => R.filter(r => sig(r[k])).length;
+    L.push(`Across ${n} settings, coded beat plain broadcast on transmissions in <b>${c('tx_vs_broadcast')}</b> and on missed schedulable deadlines in <b>${c('miss_vs_broadcast')}</b> (interval excludes zero).`);
+    L.push(`Against the published-style IDNC scheme, coded was significantly better on transmissions in ${c('tx_vs_idnc')} and on missed deadlines in ${c('miss_vs_idnc')} of ${n} settings. ${c('tx_vs_idnc') + c('miss_vs_idnc') < n * 0.5 ? 'This is best described as equal to, or at most marginally better than, IDNC.' : ''}`);
+    const tx = R.map(r => r.tx_vs_broadcast[0]);
+    L.push(`Transmission saving versus broadcast ranged from ${Math.min(...tx).toFixed(1)}% to ${Math.max(...tx).toFixed(1)}%.`);
+  }
+  if (EXP) {
+    const lo = Object.values(EXP);
+    const first = lo[0], last = lo[lo.length - 1];
+    if (lo.length > 1) L.push(`Missed-deadline improvement versus broadcast went from ${fmt(first.paired.coded_vs_broadcast.miss_sched_improvement_pts)} points at ${Math.round(first.channel.loss * 100)}% loss to ${fmt(last.paired.coded_vs_broadcast.miss_sched_improvement_pts)} points at ${Math.round(last.channel.loss * 100)}% loss.`);
+    const c = first.census;
+    if (c && c.sampled) L.push(`At sampled decision points, a coding opportunity existed in ${c.coding_possible} of ${c.sampled}; our greedy coder was beaten by the exact optimum in ${c.greedy_suboptimal}.`);
+  }
+  $('reading').innerHTML = '<ul>' + L.map(x => `<li>${x}</li>`).join('') + '</ul>';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+CRITICAL WEIGHT ON HARSH CHANNELS (60% of reports lost): STGC2 versus class-aware IDNC, both at the weight shown
+  uplinks: % saved (positive = STGC2 better); misses: points (negative = STGC2 better); [95% two-level block bootstrap]; * STGC2 better, - worse
+
+=== conservative channel (loss 0.4)
+weight                uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts   critical miss % (excl.): IDNC-cls / STGC2   uplinks IDNC-cls / STGC2
+10              +3.2 [  +1.5,  +5.1]*        +5.6 [  +3.7,  +7.4]-        +6.0 [  +3.3,  +8.7]-        -8.7 [ -11.2,  -5.7]*   7.13 / 13.11   94 / 91   [8 airspaces]
+20              +3.2 [  +0.9,  +5.4]*        +3.6 [  +2.0,  +5.1]-        +3.5 [  +1.4,  +5.7]-        -5.5 [  -7.4,  -3.5]*   5.95 / 9.46   94 / 91   [8 airspaces]
+40              +3.7 [  +2.3,  +5.8]*        +1.6 [  +0.3,  +2.3]-        +1.5 [  +0.7,  +2.3]-        -3.7 [  -5.5,  -2.0]*   5.86 / 7.39   93 / 90   [8 airspaces]
+
+=== severe channel (loss 0.5)
+weight                uplinks saved %         strict crit miss pts                crit miss pts               aware miss pts   critical miss % (excl.): IDNC-cls / STGC2   uplinks IDNC-cls / STGC2
+10              +1.9 [  +0.1,  +3.9]*        +4.5 [  +3.1,  +5.7]-        +6.6 [  +4.0,  +8.7]-        -3.3 [  -4.6,  -2.5]*   27.98 / 34.54   65 / 64   [8 airspaces]
+20              +2.3 [  -0.3,  +4.7]         +3.7 [  +1.8,  +5.3]-        +5.7 [  +2.8,  +7.9]-        -1.6 [  -2.7,  -0.9]*   25.51 / 31.17   66 / 64   [8 airspaces]
+40              +1.7 [  -0.3,  +2.9]         +1.2 [  -0.3,  +3.1]         +2.3 [  +0.1,  +4.4]-        -1.6 [  -2.7,  -0.7]*   25.36 / 27.65   65 / 64   [8 airspaces]
+
