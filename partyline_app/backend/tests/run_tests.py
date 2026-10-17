@@ -1,8 +1,8 @@
 import sys, os, traceback, inspect
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..')); sys.path.insert(0, os.path.dirname(__file__))
-import test_api, test_engine2, test_future
+import test_api, test_engine2, test_future, test_gap
 fails = 0
-for mod in (test_api, test_engine2, test_future):
+for mod in (test_api, test_engine2, test_future, test_gap):
     for n, f in sorted(vars(mod).items()):
         if n.startswith('test_') and callable(f):
             try: f(); print('PASS', mod.__name__, n)
