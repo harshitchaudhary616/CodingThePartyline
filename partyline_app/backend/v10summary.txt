@@ -1,0 +1,203 @@
+v10 RESULTS (60% of reports lost, w = 10). Primary metric: misses on the common demand set (same pairs for every scheme).
+
+1. MAIN STUDY, PRIMARY METRIC
+   [8 airspaces]  critical pairs: 11846 in force at their deadline; 5921 with zero slack at issue, 42 with 0 < slack < 5 s, 5883 eligible
+   idnc_cls   uplinks  191.4  channel s   330.2  reports   11799  crit_miss_cs   0.53%  aware_miss_cs  38.69%
+   stgc2      uplinks  181.5  channel s   314.2  reports   11580  crit_miss_cs   0.87%  aware_miss_cs  29.77%
+   stgc_g2    uplinks  186.0  channel s   322.0  reports   11716  crit_miss_cs   0.53%  aware_miss_cs  32.87%
+   stgc_cp    uplinks  182.0  channel s   314.0  reports   11615  crit_miss_cs   0.80%  aware_miss_cs  38.55%
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %                crit miss pts               aware miss pts
+   STGC2                                     +7.1 [  +1.7, +15.0]*        +6.8 [  +1.8, +13.5]*        +0.3 [  +0.1,  +0.7]-        -8.9 [ -11.5,  -5.5]*
+   STGC2 guard 45/60 s                       +3.4 [  +1.3,  +5.4]*        +3.1 [  +1.0,  +4.5]*        -0.0 [  -0.3,  +0.1]         -5.8 [  -7.7,  -3.0]*
+   STGC2 critical-priority                   +6.3 [  +2.8, +11.5]*        +6.4 [  +2.8, +11.0]*        +0.3 [  +0.0,  +1.4]         -0.1 [  -0.2,  +0.0] 
+   earlier definition (undelivered withdrawn pairs dropped, scheme-dependent set) for reference:
+   comparison vs IDNC-cls                      crit miss pts (old)         aware miss pts (old)
+   STGC2                                     +0.2 [  +0.1,  +0.4]-        -8.3 [ -11.3,  -4.8]*
+   STGC2 guard 45/60 s                       -0.0 [  -0.1,  +0.1]         -5.7 [  -8.0,  -2.8]*
+   STGC2 critical-priority                   +0.3 [  +0.0,  +1.4]         -0.1 [  -0.3,  +0.0] 
+
+2. DEADLINE ELIGIBILITY: critical misses (common set) by minimum slack at issue
+   threshold       pairs    idnc_cls       stgc2     stgc_g2     stgc_cp      STGC2 - IDNC-cls, pts [95% CI]                 CP - IDNC-cls
+   every pair      11846      51.97%      52.16%      51.97%      52.01%               +0.2 [  +0.0,  +0.4]-         +0.0 [  -0.0,  +0.3] 
+   slack > 0        5925       0.94%       1.23%       0.91%       1.16%               +0.3 [  +0.0,  +0.7]-         +0.2 [  -0.1,  +1.4] 
+   >= 1 s           5918       0.87%       1.16%       0.84%       1.09%               +0.3 [  +0.0,  +0.7]-         +0.2 [  -0.1,  +1.4] 
+   >= 2 s           5909       0.74%       1.06%       0.74%       0.99%               +0.3 [  +0.1,  +0.7]-         +0.2 [  -0.1,  +1.4] 
+   >= 5 s           5883       0.53%       0.87%       0.53%       0.80%               +0.3 [  +0.1,  +0.7]-         +0.3 [  +0.0,  +1.4] 
+   >= 10 s          5801       0.21%       0.54%       0.23%       0.21%               +0.3 [  +0.1,  +0.7]-         +0.0 [  +0.0,  +0.0] 
+   short pairs (0 < slack < 5 s): miss rate idnc_cls 63.9%  stgc2 57.2%  stgc_g2 60.6%  stgc_cp 57.2%
+   (zero-slack pairs: the predicted alert minus the 90 s margin had already passed at issue, so the deadline equals the issue time)
+
+3. WITHDRAWAL RULE AND IN-BAND FEEDBACK (primary metric)
+   -- withdrawn by any newer (main)  [8 airspaces]
+   idnc_cls   uplinks  191.4  channel s   330.2  reports   11799  crit_miss_cs   0.53%
+   stgc2      uplinks  181.5  channel s   314.2  reports   11580  crit_miss_cs   0.87%
+   stgc_g2    uplinks  186.0  channel s   322.0  reports   11716  crit_miss_cs   0.53%
+   stgc_cp    uplinks  182.0  channel s   314.0  reports   11615  crit_miss_cs   0.80%
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %                crit miss pts               aware miss pts
+   STGC2                                     +7.1 [  +1.8, +14.3]*        +6.8 [  +1.8, +13.9]*        +0.3 [  +0.1,  +0.7]-        -8.9 [ -11.6,  -5.4]*
+   STGC2 guard 45/60 s                       +3.4 [  +1.3,  +5.2]*        +3.1 [  +0.9,  +4.6]*        -0.0 [  -0.2,  +0.1]         -5.8 [  -7.8,  -3.0]*
+   STGC2 critical-priority                   +6.3 [  +2.8, +11.9]*        +6.4 [  +2.9, +11.6]*        +0.3 [  +0.0,  +1.5]         -0.1 [  -0.3,  +0.0] 
+   -- withdrawn by same kind only  [8 airspaces]
+   idnc_cls   uplinks  201.8  channel s   348.2  reports   12813  crit_miss_cs   0.47%
+   stgc2      uplinks  193.7  channel s   333.9  reports   12836  crit_miss_cs   3.35%
+   stgc_g2    uplinks  201.6  channel s   347.8  reports   13180  crit_miss_cs   2.11%
+   stgc_cp    uplinks  191.5  channel s   331.4  reports   12583  crit_miss_cs   0.45%
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %                crit miss pts               aware miss pts
+   STGC2                                     +6.3 [  +0.2, +15.1]*        +6.5 [  +0.2, +15.0]*        +2.9 [  +0.8,  +5.3]-       -10.5 [ -13.8,  -6.3]*
+   STGC2 guard 45/60 s                       +0.9 [  -1.5,  +2.7]         +0.9 [  -1.5,  +2.3]         +1.6 [  +0.1,  +3.9]-        -5.4 [  -7.0,  -3.0]*
+   STGC2 critical-priority                   +6.3 [  +3.0, +11.2]*        +5.8 [  +2.8, +10.1]*        -0.0 [  -0.1,  +0.0]         +0.0 [  -0.1,  +0.0] 
+   -- never withdrawn  [8 airspaces]
+   idnc_cls   uplinks  208.3  channel s   358.2  reports   13426  crit_miss_cs   0.42%
+   stgc2      uplinks  202.2  channel s   348.4  reports   13566  crit_miss_cs   5.62%
+   stgc_g2    uplinks  208.8  channel s   359.5  reports   13872  crit_miss_cs   4.04%
+   stgc_cp    uplinks  197.3  channel s   340.4  reports   13150  crit_miss_cs   0.42%
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %                crit miss pts               aware miss pts
+   STGC2                                     +5.2 [  -0.6, +13.0]         +5.0 [  -0.7, +13.1]         +5.2 [  +1.5,  +8.7]-       -11.2 [ -15.5,  -6.7]*
+   STGC2 guard 45/60 s                       +0.5 [  -1.7,  +1.9]         +0.4 [  -1.8,  +1.8]         +3.6 [  +0.9,  +6.5]-        -5.3 [  -7.8,  -2.3]*
+   STGC2 critical-priority                   +6.4 [  +3.2, +11.0]*        +6.0 [  +3.1,  +9.9]*        +0.0 [  +0.0,  +0.0]         -0.0 [  -0.1,  +0.0] 
+   -- reports in band, 20 ms  [8 airspaces]
+   idnc_cls   uplinks  130.6  channel s   382.8  reports    7791  crit_miss_cs   2.17%
+   stgc2      uplinks  122.8  channel s   367.5  reports    7681  crit_miss_cs   6.56%
+   stgc_g2    uplinks  127.2  channel s   378.1  reports    7822  crit_miss_cs   4.71%
+   stgc_cp    uplinks  123.4  channel s   366.4  reports    7607  crit_miss_cs   2.17%
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %                crit miss pts               aware miss pts
+   STGC2                                     +7.0 [  +2.0, +13.9]*        +6.2 [  +1.0, +13.3]*        +4.4 [  +1.6,  +7.3]-        -9.9 [ -13.2,  -6.4]*
+   STGC2 guard 45/60 s                       +3.0 [  +0.9,  +4.0]*        +1.8 [  -0.2,  +2.8]         +2.5 [  +0.5,  +5.0]-        -4.5 [  -6.5,  -2.3]*
+   STGC2 critical-priority                   +6.2 [  +2.8, +10.7]*        +5.7 [  +2.4, +10.3]*        +0.0 [  +0.0,  +0.0]         -0.0 [  -0.1,  -0.0]*
+
+4. CAUSAL CLASSES, SCORED END TO END against the recorded-future classes
+   [8 airspaces]  causal critical set vs oracle: recall 63.7%, precision 75.4%
+   (a) delivery within the predicted classes (what the scheduler was asked to do):
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %                crit miss pts               aware miss pts
+   STGC2                                     +7.2 [  +1.6, +15.5]*        +7.3 [  +1.5, +15.7]*        +0.1 [  -0.0,  +0.2]         -7.8 [ -10.1,  -5.4]*
+   STGC2 guard 45/60 s                       +3.2 [  +1.5,  +5.2]*        +3.1 [  +0.9,  +5.1]*        -0.0 [  -0.1,  +0.2]         -5.1 [  -7.0,  -3.1]*
+   STGC2 critical-priority                   +5.9 [  +1.5, +12.6]*        +5.6 [  +1.4, +12.1]*        +0.0 [  +0.0,  +0.0]         -0.5 [  -1.2,  -0.0]*
+   (b) end to end: oracle critical / awareness pairs (oracle deadlines, common set) decoded in time, whatever the reason
+   scheme        crit e2e miss  of which: flagged critical  not flagged  not flagged, in awareness  aware e2e miss
+   idnc_cls             21.85%                       2.33%       45.48%                     41.98%          35.04%
+   stgc2                19.57%                       4.50%       37.67%                     32.94%          27.38%
+   stgc_g2              20.43%                       2.65%       42.14%                     38.35%          30.03%
+   stgc_cp              21.50%                       2.33%       44.42%                     40.66%          34.59%
+   share of oracle critical pairs flagged critical by the predictor: 53.7%; of the others, share in the causal awareness class: 65.1%
+   comparison vs IDNC-cls                          uplinks saved %            crit e2e miss pts           aware e2e miss pts
+   STGC2                                     +7.2 [  +1.7, +15.4]*        -2.3 [  -4.4,  -0.3]*        -7.7 [  -9.9,  -5.1]*
+   STGC2 guard 45/60 s                       +3.2 [  +1.4,  +5.1]*        -1.4 [  -2.6,  -0.3]*        -5.0 [  -6.9,  -3.0]*
+   STGC2 critical-priority                   +5.9 [  +1.5, +13.2]*        -0.4 [  -1.1,  +0.8]         -0.4 [  -1.2,  +0.0] 
+
+5. COMBINED: exact decoding + in-band reports + same-kind withdrawal + causal classes, scored end to end
+   -- default channel, reports 20 ms  [8 airspaces]
+   idnc_cls   uplinks  135.6  channel s   394.0  reports    7958  crit_miss_cs   1.62%  crit_e2e_miss  31.49%  aware_e2e_miss  59.81%
+   stgc2      uplinks  126.0  channel s   378.2  reports    7960  crit_miss_cs   5.61%  crit_e2e_miss  33.45%  aware_e2e_miss  51.82%
+   stgc_g2    uplinks  133.1  channel s   393.2  reports    8109  crit_miss_cs   3.56%  crit_e2e_miss  31.49%  aware_e2e_miss  56.05%
+   stgc_cp    uplinks  128.8  channel s   381.7  reports    7878  crit_miss_cs   1.60%  crit_e2e_miss  31.68%  aware_e2e_miss  59.45%
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %            crit e2e miss pts           aware e2e miss pts
+   STGC2                                     +7.9 [  +3.3, +14.2]*        +5.8 [  +1.7, +12.6]*        +2.0 [  -2.1,  +4.8]         -8.0 [ -10.2,  -5.7]*
+   STGC2 guard 45/60 s                       +2.4 [  -1.2,  +5.3]         +1.4 [  -1.6,  +4.4]         +0.0 [  -2.7,  +2.5]         -3.8 [  -4.7,  -2.9]*
+   STGC2 critical-priority                   +5.8 [  +2.4, +10.7]*        +4.4 [  +1.6,  +8.8]*        +0.2 [  -0.4,  +0.9]         -0.4 [  -0.9,  +0.0] 
+   -- VDL Mode 2 profile, reports 10 ms  [8 airspaces]
+   unicast    uplinks 3633.8  channel s   346.1  reports    3634  crit_miss_cs  40.30%  crit_e2e_miss  47.71%  aware_e2e_miss  64.64%
+   idnc_cls   uplinks  371.4  channel s   188.5  reports   15692  crit_miss_cs   0.00%  crit_e2e_miss  17.58%  aware_e2e_miss  23.27%
+   stgc2      uplinks  275.7  channel s   176.8  reports   15335  crit_miss_cs   0.00%  crit_e2e_miss  14.07%  aware_e2e_miss  17.60%
+   stgc_g2    uplinks  369.6  channel s   179.3  reports   14786  crit_miss_cs   0.00%  crit_e2e_miss  15.12%  aware_e2e_miss  20.58%
+   stgc_cp    uplinks  289.2  channel s   179.1  reports   15448  crit_miss_cs   0.00%  crit_e2e_miss  16.62%  aware_e2e_miss  22.46%
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %            crit e2e miss pts           aware e2e miss pts
+   STGC2                                    +25.7 [ +20.7, +31.6]*       +10.4 [  +3.5, +19.0]*        -3.5 [  -5.8,  -0.7]*        -5.7 [  -7.6,  -3.2]*
+   STGC2 guard 45/60 s                       +1.1 [  -1.6,  +4.9]         +5.6 [  +2.8,  +9.0]*        -2.5 [  -3.9,  -1.4]*        -2.7 [  -3.9,  -1.3]*
+   STGC2 critical-priority                  +22.0 [ +17.4, +26.9]*        +8.4 [  +3.8, +14.9]*        -1.0 [  -2.6,  +0.4]         -0.8 [  -1.7,  -0.1]*
+   IDNC-cls vs unicast                      +86.6 [ +82.2, +90.6]*       +47.3 [ +41.1, +56.9]*       -30.1 [ -38.7, -20.3]*       -41.4 [ -55.0, -23.5]*
+   STGC2 critical-priority vs unicast       +89.9 [ +87.1, +92.6]*       +51.2 [ +44.7, +61.5]*       -31.1 [ -39.3, -21.0]*       -42.2 [ -55.7, -24.3]*
+
+6. HARSH CHANNELS AND LARGE SECTORS (primary metric)
+   -- conservative channel  [8 airspaces]
+   idnc_cls   uplinks   93.8  channel s   453.8  reports    5853  crit_miss_cs  10.27%
+   stgc2      uplinks   90.8  channel s   438.9  reports    5837  crit_miss_cs  18.09%
+   stgc_cp    uplinks   92.9  channel s   451.1  reports    5830  crit_miss_cs  10.27%
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %                crit miss pts               aware miss pts
+   STGC2                                     +3.2 [  +1.5,  +5.2]*        +3.1 [  +0.9,  +5.3]*        +7.8 [  +4.4, +11.3]-        -7.0 [  -8.8,  -4.8]*
+   STGC2 critical-priority                   +1.1 [  +0.3,  +2.7]*        +0.5 [  -0.4,  +1.6]         +0.0 [  +0.0,  +0.0]         +0.2 [  +0.0,  +0.6] 
+   -- severe channel  [8 airspaces]
+   idnc_cls   uplinks   65.4  channel s   551.7  reports    3562  crit_miss_cs  35.56%
+   stgc2      uplinks   64.0  channel s   540.9  reports    3553  crit_miss_cs  42.95%
+   stgc_cp    uplinks   65.1  channel s   549.6  reports    3560  crit_miss_cs  35.56%
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %                crit miss pts               aware miss pts
+   STGC2                                     +1.9 [  +0.3,  +4.0]*        +1.3 [  -0.3,  +4.3]         +7.4 [  +4.1, +10.1]-        -2.3 [  -3.8,  -1.4]*
+   STGC2 critical-priority                   +0.5 [  +0.0,  +1.3]*        +0.2 [  -0.6,  +0.9]         +0.0 [  +0.0,  +0.0]         +0.1 [  -0.2,  +0.6] 
+   -- sector 120 NM  [8 airspaces]
+   idnc_cls   uplinks  208.1  channel s   358.1  reports   14638  crit_miss_cs   0.65%
+   stgc2      uplinks  192.3  channel s   332.1  reports   13835  crit_miss_cs   3.52%
+   stgc_g2    uplinks  200.1  channel s   345.0  reports   14186  crit_miss_cs   0.92%
+   stgc_cp    uplinks  193.0  channel s   333.9  reports   13905  crit_miss_cs   0.65%
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %                crit miss pts               aware miss pts
+   STGC2                                     +9.5 [  +3.8, +17.2]*        +9.3 [  +3.8, +16.5]*        +2.9 [  +1.2,  +4.7]-       -11.3 [ -14.5,  -7.6]*
+   STGC2 guard 45/60 s                       +3.9 [  +1.9,  +5.7]*        +3.6 [  +1.6,  +5.9]*        +0.3 [  -0.3,  +1.1]         -7.3 [  -9.2,  -4.5]*
+   STGC2 critical-priority                   +8.6 [  +4.9, +13.8]*        +8.0 [  +4.8, +12.6]*        +0.0 [  +0.0,  +0.0]         -0.4 [  -0.9,  -0.1]*
+   -- sector 240 NM  [8 airspaces]
+   idnc_cls   uplinks  227.0  channel s   389.1  reports   17002  crit_miss_cs   0.70%
+   stgc2      uplinks  197.2  channel s   339.9  reports   14591  crit_miss_cs   7.26%
+   stgc_g2    uplinks  203.2  channel s   350.5  reports   14851  crit_miss_cs   1.38%
+   stgc_cp    uplinks  198.3  channel s   342.7  reports   14799  crit_miss_cs   0.70%
+   comparison vs IDNC-cls                          uplinks saved %         channel time saved %                crit miss pts               aware miss pts
+   STGC2                                    +14.7 [ +10.6, +20.2]*       +14.3 [ +10.2, +19.9]*        +6.6 [  +3.2,  +9.8]-       -11.4 [ -14.2,  -7.6]*
+   STGC2 guard 45/60 s                       +9.9 [  +7.9, +12.7]*        +9.4 [  +6.8, +12.1]*        +0.7 [  -0.0,  +1.8]         -8.7 [ -11.3,  -5.4]*
+   STGC2 critical-priority                  +13.6 [ +11.3, +17.4]*       +12.8 [ +10.9, +16.4]*        +0.0 [  +0.0,  +0.0]         -0.4 [  -0.8,  -0.2]*
+
+7. NON-INFERIORITY (exploratory) on critical misses, common set: scheme minus class-aware IDNC, one-sided 95% upper bound
+   configuration                     scheme     IDNC-cls %  diff pts   upper  <1.0  <0.5
+   main study                        stgc2            0.53     +0.34   +0.64   yes    no
+   main study                        stgc_g2          0.53     -0.00   +0.12   yes   yes
+   main study                        stgc_cp          0.53     +0.27   +1.16    no    no
+   same-kind withdrawal              stgc2            0.47     +2.88   +4.90    no    no
+   same-kind withdrawal              stgc_g2          0.47     +1.64   +3.50    no    no
+   same-kind withdrawal              stgc_cp          0.47     -0.02   +0.00   yes   yes
+   never withdrawn                   stgc2            0.42     +5.19   +8.25    no    no
+   never withdrawn                   stgc_g2          0.42     +3.62   +6.14    no    no
+   never withdrawn                   stgc_cp          0.42     +0.00   +0.00   yes   yes
+   reports in band 20 ms             stgc2            2.17     +4.39   +6.69    no    no
+   reports in band 20 ms             stgc_g2          2.17     +2.53   +4.50    no    no
+   reports in band 20 ms             stgc_cp          2.17     +0.00   +0.00   yes   yes
+   causal, end to end                stgc2           21.85     -2.28   -0.59   yes   yes
+   causal, end to end                stgc_g2         21.85     -1.42   -0.47   yes   yes
+   causal, end to end                stgc_cp         21.85     -0.35   +0.61   yes    no
+   combined, default, e2e            stgc2           31.49     +1.96   +4.43    no    no
+   combined, default, e2e            stgc_g2         31.49     +0.01   +1.97    no    no
+   combined, default, e2e            stgc_cp         31.49     +0.20   +0.77   yes    no
+   combined, VDL2, e2e               stgc2           17.58     -3.50   -1.31   yes   yes
+   combined, VDL2, e2e               stgc_g2         17.58     -2.46   -1.53   yes   yes
+   combined, VDL2, e2e               stgc_cp         17.58     -0.96   +0.30   yes   yes
+   conservative channel              stgc2           10.27     +7.82  +10.79    no    no
+   conservative channel              stgc_cp         10.27     +0.00   +0.00   yes   yes
+   severe channel                    stgc2           35.56     +7.39   +9.61    no    no
+   severe channel                    stgc_cp         35.56     +0.00   +0.00   yes   yes
+   sector 120 NM                     stgc2            0.65     +2.87   +4.39    no    no
+   sector 120 NM                     stgc_g2          0.65     +0.27   +0.91   yes    no
+   sector 120 NM                     stgc_cp          0.65     +0.00   +0.00   yes   yes
+   sector 240 NM                     stgc2            0.70     +6.56   +9.39    no    no
+   sector 240 NM                     stgc_g2          0.70     +0.68   +1.67    no    no
+   sector 240 NM                     stgc_cp          0.70     +0.00   +0.00   yes   yes
+
+8. WHERE THE UPLINKS ARE SAVED: uplinks sent before the last critical deadline of the window (later uplinks serve awareness pairs only)
+   -- main study  [8 airspaces]   mean last critical deadline 555 s
+   IDNC-cls                   uplinks total  191.4  before last critical deadline  191.3  after    0.1
+   STGC2                      uplinks total  181.5  before last critical deadline  181.3  after    0.2
+   STGC2 guard 45/60 s        uplinks total  186.0  before last critical deadline  185.9  after    0.1
+   STGC2 critical-priority    uplinks total  182.0  before last critical deadline  181.9  after    0.1
+                                     uplinks saved % (all)     uplinks saved % (before)
+   STGC2                             +7.1 [  +1.9, +14.6]*        +7.3 [  +1.8, +15.2]*
+   STGC2 guard 45/60 s               +3.4 [  +1.2,  +5.3]*        +3.5 [  +1.4,  +5.4]*
+   STGC2 critical-priority           +6.3 [  +2.6, +11.7]*        +6.4 [  +2.8, +12.4]*
+   -- conservative channel  [8 airspaces]   mean last critical deadline 555 s
+   IDNC-cls                   uplinks total   93.8  before last critical deadline   93.6  after    0.3
+   STGC2                      uplinks total   90.8  before last critical deadline   90.7  after    0.1
+   STGC2 critical-priority    uplinks total   92.9  before last critical deadline   92.6  after    0.3
+                                     uplinks saved % (all)     uplinks saved % (before)
+   STGC2                             +3.2 [  +1.6,  +5.1]*        +3.1 [  +1.5,  +5.1]*
+   STGC2 critical-priority           +1.1 [  +0.3,  +2.7]*        +1.1 [  +0.3,  +2.7]*
+   -- sector 240 NM  [8 airspaces]   mean last critical deadline 555 s
+   IDNC-cls                   uplinks total  227.0  before last critical deadline  226.9  after    0.1
+   STGC2                      uplinks total  197.2  before last critical deadline  197.0  after    0.2
+   STGC2 guard 45/60 s        uplinks total  203.2  before last critical deadline  203.1  after    0.1
+   STGC2 critical-priority    uplinks total  198.3  before last critical deadline  198.1  after    0.2
+                                     uplinks saved % (all)     uplinks saved % (before)
+   STGC2                            +14.7 [ +10.6, +20.5]*       +14.8 [ +10.6, +20.6]*
+   STGC2 guard 45/60 s               +9.9 [  +7.9, +12.4]*       +10.0 [  +8.0, +12.5]*
+   STGC2 critical-priority          +13.6 [ +11.3, +17.5]*       +13.7 [ +11.3, +18.0]*

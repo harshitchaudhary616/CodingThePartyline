@@ -46,6 +46,9 @@ Validation options (defaults reproduce every earlier result exactly):
   supersede (0/1/2) 1 = a new clearance to an aircraft withdraws its previous one (earlier results); 0 = clearances are never withdrawn;
                    2 = typed: a clearance withdraws only the previous clearance of the same aircraft and the same kind (c.kind if the
                    scenario sets it, otherwise one of three kinds drawn per clearance from a fixed hash).
+  track (0/1)      1 = the result also carries dec = {(clearance, aircraft): first time the aircraft decoded it} for EVERY listener (not only
+                   pairs with a need) and wd = {clearance: time it was withdrawn by a newer clearance}; used by run_v10.py for metrics on a
+                   common demand set and for end-to-end evaluation of causal classes. Scheduling is unchanged.
 Each transmission record also counts how the receptions of aircraft with a (believed) need turned out:
 rn = decoded something new, rs = stored a useful combination without decoding, rw = wasted (nothing new).
 Each transmission record also counts the feedback a feedback-based scheme needs for it: fb = receivers with
@@ -58,7 +61,7 @@ from .coding import SCHEMES
 from .engine import clean, CH_DEFAULTS, LIMITS, DT, _summ, _active
 from . import gf256
 
-CH2_DEFAULTS = dict(CH_DEFAULTS, overhear=1.0, buffer=1.0, het=0.0, fbmode=0.0, fbloss=0.0, hdr=0.0, coll=0.0, nbg=0.0, pp=0.05, slot=0.01, fbpolicy=0.0, fbperiod=0.0, exact=0.0, fbair=0.0, supersede=1.0)
+CH2_DEFAULTS = dict(CH_DEFAULTS, overhear=1.0, buffer=1.0, het=0.0, fbmode=0.0, fbloss=0.0, hdr=0.0, coll=0.0, nbg=0.0, pp=0.05, slot=0.01, fbpolicy=0.0, fbperiod=0.0, exact=0.0, fbair=0.0, supersede=1.0, track=0.0)
 LIMITS.setdefault("buffer", (0.0, 1.0))
 LIMITS.setdefault("het", (0.0, 1.0))
 LIMITS["fbmode"] = (0.0, 2.0)
@@ -73,6 +76,7 @@ LIMITS.setdefault("fbperiod", (0.0, 600.0))
 LIMITS.setdefault("exact", (0.0, 1.0))
 LIMITS.setdefault("fbair", (0.0, 5.0))
 LIMITS.setdefault("supersede", (0.0, 2.0))
+LIMITS.setdefault("track", (0.0, 1.0))
 
 
 # ------------------------------------------------------------------ generic-rank decoding
@@ -166,6 +170,9 @@ def simulate(scheme: str, scn, ch: dict, seed: int) -> dict:
     crng = np.random.default_rng(seed + 777)          # coefficient stream, separate so that the channel draws are unchanged
     sup = int(round(ch["supersede"]))
     kinds = ("turn", "vertical", "speed")
+    track = ch["track"] >= 0.5
+    dec: dict = {}                # (clearance, aircraft) -> first decode time (track = 1)
+    wd: dict = {}                 # clearance -> time it was withdrawn by a newer clearance
 
     def kind_of(c):
         k = getattr(c, "kind", None)
@@ -220,11 +227,17 @@ def simulate(scheme: str, scn, ch: dict, seed: int) -> dict:
     while ci < len(cl) or bpending:
         while ci < len(cl) and cl[ci].t <= t:
             c = cl[ci]; ci += 1
-            deliver(c.ac, rx[c.ac].learn(c.cid))
+            got0 = rx[c.ac].learn(c.cid)
+            if track:
+                for m in got0:
+                    dec.setdefault((m, c.ac), t)
+            deliver(c.ac, got0)
             if rep:
                 brx[c.ac].learn(c.cid)
             key = c.ac if sup == 1 else (c.ac, kind_of(c))
             old = live.get(key) if sup >= 1 else None
+            if old is not None:
+                wd.setdefault(old, c.t)
             if rep and old is not None:
                 bpending.pop(old, None)
             if old is not None and old in pending:
@@ -331,6 +344,9 @@ def simulate(scheme: str, scn, ch: dict, seed: int) -> dict:
                     g = gapstat.setdefault(gk, [0, 0]); g[0] += 1; g[1] += int(wasted)
                 else:
                     newly = rx[r].add(T, buffer)
+                if track:
+                    for m in newly:
+                        dec.setdefault((m, r), t)
                 deliver(r, newly)
             if r in needy:
                 res.append([sorted(T), r, int(ok)])
@@ -378,4 +394,6 @@ def simulate(scheme: str, scn, ch: dict, seed: int) -> dict:
                         fb_nack=lost, fb_nack_c=lostc, fbs=(nsent if rep and ch["fbmode"] < 1.5 else len(needy)), rn=rn, rs=rs, rw=rw))
     out = _summ(scheme, list(pairs.values()), txs)
     out["gapstat"] = gapstat
+    if track:
+        out["dec"], out["wd"] = dec, wd
     return out
