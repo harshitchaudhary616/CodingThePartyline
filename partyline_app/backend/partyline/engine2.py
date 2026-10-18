@@ -38,6 +38,14 @@ probability 1 - exp(-nbg*pp), combined with ch["coll"] as 1 - (1 - coll)*exp(-nb
 Packet overhead (ch["hdr"], default 0 = earlier results): a packet combining k clearances needs an id and a coding
 coefficient per clearance, so its airtime is airtime * (1 + hdr * (k - 1)); hdr is the extra airtime of one more
 clearance as a fraction of one message (e.g. 3 header bytes per 100-byte message = 0.03).
+Validation options (defaults reproduce every earlier result exactly):
+  exact (0/1)      1 = receivers decode by exact Gaussian elimination over GF(2^8) with the packet's real random non-zero coefficients
+                   (partyline.gf256.ExactRx) instead of the generic-rank matching rule; coefficients come from a separate random stream.
+  fbair (s)        > 0 = every state report (or NACK) occupies the shared channel for fbair seconds after the uplink it answers, so
+                   feedback delays the next uplink inside the simulation instead of being charged afterwards.
+  supersede (0/1/2) 1 = a new clearance to an aircraft withdraws its previous one (earlier results); 0 = clearances are never withdrawn;
+                   2 = typed: a clearance withdraws only the previous clearance of the same aircraft and the same kind (c.kind if the
+                   scenario sets it, otherwise one of three kinds drawn per clearance from a fixed hash).
 Each transmission record also counts how the receptions of aircraft with a (believed) need turned out:
 rn = decoded something new, rs = stored a useful combination without decoding, rw = wasted (nothing new).
 Each transmission record also counts the feedback a feedback-based scheme needs for it: fb = receivers with
@@ -48,8 +56,9 @@ import math
 import numpy as np
 from .coding import SCHEMES
 from .engine import clean, CH_DEFAULTS, LIMITS, DT, _summ, _active
+from . import gf256
 
-CH2_DEFAULTS = dict(CH_DEFAULTS, overhear=1.0, buffer=1.0, het=0.0, fbmode=0.0, fbloss=0.0, hdr=0.0, coll=0.0, nbg=0.0, pp=0.05, slot=0.01, fbpolicy=0.0, fbperiod=0.0)
+CH2_DEFAULTS = dict(CH_DEFAULTS, overhear=1.0, buffer=1.0, het=0.0, fbmode=0.0, fbloss=0.0, hdr=0.0, coll=0.0, nbg=0.0, pp=0.05, slot=0.01, fbpolicy=0.0, fbperiod=0.0, exact=0.0, fbair=0.0, supersede=1.0)
 LIMITS.setdefault("buffer", (0.0, 1.0))
 LIMITS.setdefault("het", (0.0, 1.0))
 LIMITS["fbmode"] = (0.0, 2.0)
@@ -61,6 +70,9 @@ LIMITS.setdefault("pp", (0.001, 1.0))
 LIMITS.setdefault("slot", (0.0, 1.0))
 LIMITS.setdefault("fbpolicy", (0.0, 2.0))
 LIMITS.setdefault("fbperiod", (0.0, 600.0))
+LIMITS.setdefault("exact", (0.0, 1.0))
+LIMITS.setdefault("fbair", (0.0, 5.0))
+LIMITS.setdefault("supersede", (0.0, 2.0))
 
 
 # ------------------------------------------------------------------ generic-rank decoding
@@ -149,10 +161,19 @@ def simulate(scheme: str, scn, ch: dict, seed: int) -> dict:
     v2 = getattr(sched, "v2", False)
     crit = getattr(scn, "critical", None)          # set of critical (clearance, aircraft) pairs, if tagged
     buffer = ch["buffer"] >= 0.5
-    rx = [Rx() for _ in range(scn.n)]
+    exact = ch["exact"] >= 0.5
+    RX = gf256.ExactRx if exact else Rx
+    crng = np.random.default_rng(seed + 777)          # coefficient stream, separate so that the channel draws are unchanged
+    sup = int(round(ch["supersede"]))
+    kinds = ("turn", "vertical", "speed")
+
+    def kind_of(c):
+        k = getattr(c, "kind", None)
+        return k if k is not None else kinds[(c.cid * 2654435761) % 3]
+    rx = [RX() for _ in range(scn.n)]
     known = [r.known for r in rx]          # live views (same set objects)
     rep = ch["fbmode"] >= 0.5
-    brx = [Rx() for _ in range(scn.n)] if rep else rx          # the station's belief about each aircraft
+    brx = [RX() for _ in range(scn.n)] if rep else rx          # the station's belief about each aircraft
     bknown = [r.known for r in brx]
     pending: dict = {}
     bpending: dict = pending                                     # pairs the station believes are still open
@@ -202,14 +223,15 @@ def simulate(scheme: str, scn, ch: dict, seed: int) -> dict:
             deliver(c.ac, rx[c.ac].learn(c.cid))
             if rep:
                 brx[c.ac].learn(c.cid)
-            old = live.get(c.ac)
+            key = c.ac if sup == 1 else (c.ac, kind_of(c))
+            old = live.get(key) if sup >= 1 else None
             if rep and old is not None:
                 bpending.pop(old, None)
             if old is not None and old in pending:
                 for r in list(pending[old]):
                     end(old, r, "superseded")
                 del pending[old]
-            live[c.ac] = c.cid
+            live[key] = c.cid
             if c.dem:
                 dem = {r: d for r, d in c.dem.items() if c.cid not in known[r]}
                 pending[c.cid] = dem
@@ -245,7 +267,11 @@ def simulate(scheme: str, scn, ch: dict, seed: int) -> dict:
         if v2:
             view = dict(pending=bpending, known=bknown, rx=brx, now=t, sent=sent, first_tx=first_tx,
                         ploss=lambda r: ploss(r), buffer=buffer, scn=scn)
-            out = sched(view)
+            gf256.SCORING[0] = True
+            try:
+                out = sched(view)
+            finally:
+                gf256.SCORING[0] = False
             if isinstance(out, tuple):
                 T, to = out[0], None
                 if T is None:
@@ -254,12 +280,18 @@ def simulate(scheme: str, scn, ch: dict, seed: int) -> dict:
             else:
                 T, to = out["T"], out.get("to")
         else:
-            T, got = sched(bpending, bknown, t)
+            gf256.SCORING[0] = True
+            try:
+                T, got = sched(bpending, bknown, t)
+            finally:
+                gf256.SCORING[0] = False
             if T is None:
                 nxt = cl[ci].t if ci < len(cl) else got
                 t = max(t + 0.05, min(got, nxt)); continue
             to = {r for _, r in got} if scheme == "unicast" else None
         T = set(T)
+        if exact:
+            gf256.CUR = {m: int(crng.integers(1, 256)) for m in T}
         air = ch["airtime"] * (1.0 + ch["hdr"] * (len(T) - 1))        # coded packet: id + coefficient per extra clearance
         service = (air + rng.exponential(ch["access"])) / (1 - ch["bg"]) if ch["access"] > 0 else air / (1 - ch["bg"])
         if ch["nbg"] > 0:                                   # p-persistent CSMA: geometric number of busy slots before sending
@@ -337,6 +369,9 @@ def simulate(scheme: str, scn, ch: dict, seed: int) -> dict:
                         del bpending[m][r]
                 if not bpending[m]:
                     del bpending[m]
+        if ch["fbair"] > 0:                       # reports occupy the shared channel before the next uplink
+            nrep = (nsent if ch["fbmode"] < 1.5 else lost) if rep else (1 if to is not None else len(needy))
+            t += nrep * ch["fbair"]
         # feedback a scheme would need for this packet: every receiver with a pending need reports its state
         # (fb), or only those that lost it report (fb_nack); *_c = the same counted over critical receivers only
         txs.append(dict(t0=t0, t1=t, T=sorted(T), q=q, res=res, fb=len(needy), fb_c=len(cneedy),
